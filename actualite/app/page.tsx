@@ -1,0 +1,141 @@
+import ArticleCard from './components/ArticleCard';
+import mockArticles from './data/mockArticles';
+import Link from 'next/link';
+import NewsTicker from './components/NewsTicker';
+import VideosSection from './components/VideosSection';
+import FeaturedHero from './components/FeaturedHero';
+import MostReadSlider from './components/MostReadSlider';
+import prisma from '../../lib/prismaClient';
+
+export default async function Home() {
+  // Try to load articles from Prisma (server). Fallback to mockArticles for dev/offline.
+  let articles = mockArticles as any[];
+  try {
+    const fromDb = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
+    console.log('Fetched articles from database:', fromDb);
+    if (fromDb && fromDb.length > 0) {
+      articles = fromDb.filter((article: any) => article.publishedAt !== null) as any[]; // Ensure only published articles are included
+      console.log('Filtered published articles:', articles);
+
+      // Vérifier les articles supprimés
+      const deletedArticles = fromDb.filter((article: any) => article.deletedAt !== null);
+      console.log('Deleted articles (should not appear):', deletedArticles);
+    }
+  } catch (e) {
+    console.error('Error fetching articles from database:', e);
+  }
+
+  console.log('All articles:', articles);
+
+  // Filtrer les articles à la une (les 3 premiers articles)
+  const featuredArticles = articles.slice(0, 3);
+  console.log('Featured articles:', featuredArticles);
+
+  // Reste des articles pour la section dernières actualités
+  const latestArticles = articles.slice(3);
+
+  return (
+    <main className="min-h-screen bg-white">
+  {/* LogoBar moved to root layout so it's visible site-wide */}
+      {/* News ticker */}
+      <NewsTicker />
+
+  {/* Featured hero */}
+  <FeaturedHero />
+
+  {/* Most read slider */}
+  <MostReadSlider />
+
+      {/* Section Hero - Article Principal */}
+      <section className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div className="space-y-6">
+              <span className="inline-block bg-blue-500 px-3 py-1 rounded-full text-sm font-semibold">
+                À la une
+              </span>
+              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+                {featuredArticles[0]?.title}
+              </h1>
+              <p className="text-lg text-blue-100">
+                {featuredArticles[0]?.excerpt}
+              </p>
+              <Link 
+                href={`/actualite/article/${featuredArticles[0]?.slug}`}
+                className="inline-block bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+              >
+                Lire l'article
+              </Link>
+            </div>
+            <div className="relative h-[400px] rounded-xl overflow-hidden shadow-xl">
+              <img 
+                src={featuredArticles[0]?.image} 
+                alt={featuredArticles[0]?.title}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Articles à la une */}
+        <section className="mb-16">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900">Articles à la une</h2>
+            <div className="flex gap-4">
+              <Link 
+                href="/actualite/politique"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Voir plus
+              </Link>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredArticles.slice(1).map((article) => (
+              <ArticleCard
+                key={article.id}
+                title={article.title}
+                excerpt={article.excerpt}
+                category={article.category}
+                date={article.date}
+                image={article.image}
+                slug={article.slug}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Dernières actualités avec filtres par catégorie */}
+        <section>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <h2 className="text-3xl font-bold text-gray-900">Dernières actualités</h2>
+            <div className="flex flex-wrap gap-3">
+              {/* Use Next Link for client-side navigation to avoid 404s */}
+              <Link href="/actualite" className="px-4 py-2 rounded-full bg-blue-600 text-white font-medium">Tout</Link>
+              <Link href="/actualite/politique" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">Politique</Link>
+              <Link href="/actualite/economie" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">Économie</Link>
+              <Link href="/actualite/sport" className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200">Sport</Link>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {latestArticles.map((article) => (
+              <ArticleCard
+                key={article.id}
+                title={article.title}
+                excerpt={article.excerpt}
+                category={article.category}
+                date={article.date}
+                image={article.image}
+                slug={article.slug}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+      {/* Videos section (YouTube) */}
+      <VideosSection />
+    </main>
+  );
+}

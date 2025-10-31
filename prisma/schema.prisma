@@ -1,0 +1,39 @@
+// Prisma schema (SQLite) - run `npx prisma migrate dev --name init` after installing deps
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Article {
+  id         Int     @id @default(autoincrement())
+  title      String
+  slug       String  @unique
+  excerpt    String?
+  content    String?
+  category   String?
+  image      String?
+  synced     Boolean @default(false)
+  syncedAt   DateTime?
+  publishedAt DateTime?
+  isBreaking Boolean @default(false)
+  views      Int     @default(0)
+  shares     Int     @default(0)
+  createdAt  DateTime @default(now())
+  highlightedQuote String? // Added field for important quotes
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  role     String
+}
+
+model NewsletterSubscriber {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}

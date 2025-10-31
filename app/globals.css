@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+/* Dark theme variables */
+.dark {
+  --background: #0b1220;
+  --foreground: #e6eef8;
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply transition-colors duration-200;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .prose {
+    @apply max-w-none;
+  }
+  
+  .prose p {
+    @apply text-gray-600 leading-relaxed;
+  }
+
+  .prose h2 {
+    @apply text-2xl font-bold text-gray-900 mt-8 mb-4;
+  }
+
+  .prose h3 {
+    @apply text-xl font-semibold text-gray-900 mt-6 mb-3;
+  }
+
+  .category-badge {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Logo subtle float animation */
+@keyframes logoFloat {
+  0% { transform: translateY(0px) rotate(0deg) scale(1); }
+  25% { transform: translateY(-4px) rotate(-0.8deg) scale(1.01); }
+  50% { transform: translateY(0px) rotate(0deg) scale(1); }
+  75% { transform: translateY(3px) rotate(0.6deg) scale(0.995); }
+  100% { transform: translateY(0px) rotate(0deg) scale(1); }
+}
+
+.logo-animate {
+  animation: logoFloat 6s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .logo-animate {
+    animation: none !important;
+  }
+}
+
+/* Stronger logo animation for homepage */
+@keyframes logoFloatHome {
+  0% { transform: translateY(0px) rotate(0deg) scale(1); }
+  15% { transform: translateY(-6px) rotate(-3deg) scale(1.02); }
+  30% { transform: translateY(0px) rotate(0deg) scale(1); }
+  55% { transform: translateY(6px) rotate(4deg) scale(0.99); }
+  85% { transform: translateY(0px) rotate(-2deg) scale(1.01); }
+  100% { transform: translateY(0px) rotate(0deg) scale(1); }
+}
+
+.logo-animate-home {
+  animation: logoFloatHome 8s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-animate-home { animation: none !important; }
+}
+
+/* Smooth hover and focus defaults for links and buttons */
+@layer components {
+  a, button {
+    @apply transition duration-150 ease-in-out;
+  }
+
+  a:focus, button:focus {
+    @apply outline-none ring-2 ring-blue-400 dark:ring-blue-600 rounded;
+  }
+
+  /* Dark mode specific utilities for typical elements */
+  .dark .prose p {
+    color: #cbd5e1; /* slate-300 */
+  }
+
+  .dark a {
+    color: #93c5fd; /* blue-300 */
+  }
+}
