@@ -1,5 +1,7 @@
 import ArticleCard from '../../components/ArticleCard';
 import prisma from '../../../../lib/prismaClient';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 interface Article {
   id: number;
@@ -18,8 +20,16 @@ export default async function SportPage() {
       where: { category: 'Sport', publishedAt: { not: null } },
       orderBy: { createdAt: 'desc' },
     });
-    sportArticles = fromDb;
-    console.log('Fetched sport articles:', sportArticles);
+    sportArticles = (fromDb || []).map((a: any) => ({
+      id: a.id,
+      title: a.title || a.slug,
+      excerpt: a.excerpt || '',
+      category: a.category || 'Sport',
+      date: (a.publishedAt || a.createdAt) ? new Date(a.publishedAt || a.createdAt).toLocaleDateString('fr-FR') : '',
+      image: a.image || '/placeholder.png',
+      slug: a.slug,
+    }));
+    console.log('Fetched sport articles:', sportArticles.length);
   } catch (e) {
     console.error('Error fetching sport articles:', e);
   }

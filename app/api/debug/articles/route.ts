@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../../../lib/prismaClient';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   try {
     const all = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
-    // Return minimal fields to inspect slugs and publish status
     const out = all.map(a => ({ id: a.id, slug: a.slug, title: a.title, publishedAt: a.publishedAt, synced: (a as any).synced ?? true }));
     return NextResponse.json(out);
-  } catch (e) {
+  } catch (e: any) {
     console.error('Error in debug GET /api/debug/articles', e);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
+    const err = {
+      name: e?.name,
+      code: e?.code,
+      message: e?.message,
+      meta: e?.meta,
+    };
+    return NextResponse.json({ error: 'failed', details: err }, { status: 500 });
   }
 }
