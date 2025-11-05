@@ -21,6 +21,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        if: steps.install-deps != null
+        run: |
+          # Ensure Prisma client is generated when building on CI/Vercel
+          npx prisma generate || true
+
       - name: Build
         run: npm run build --if-present
 
