@@ -35,12 +35,12 @@ const Footer = () => {
         console.warn('[newsletter] failed:', payload);
         setErrorMsg(payload?.error || 'Une erreur est survenue');
         setStatus('error');
-        setToast({ type: 'error', title: 'Erreur', message: payload?.error || 'Une erreur est survenue lors de l\'inscription.' });
+          setToast({ type: 'error', title: 'Erreur', message: payload?.error || 'Une erreur est survenue lors de l&apos;inscription.' });
         return;
       }
       setStatus('sent');
       setEmail('');
-      setToast({ type: 'success', title: 'Abonnement confirmé', message: 'Merci ! Vous êtes inscrit à la newsletter.' });
+  setToast({ type: 'success', title: 'Abonnement confirmé', message: 'Merci ! Vous &ecirc;tes inscrit &agrave; la newsletter.' });
     } catch (err) {
       setStatus('error');
       setErrorMsg('Impossible de contacter le serveur.');
@@ -117,7 +117,7 @@ const Footer = () => {
                   type="submit"
                   className="-ml-px inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 transition-colors"
                   disabled={status === 'loading' || status === 'sent'}
-                  aria-label="S'abonner"
+                  aria-label="S&apos;abonner"
                 >
                   {status === 'sent' ? (
                     'Merci !'
@@ -128,7 +128,7 @@ const Footer = () => {
                       <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
                       </svg>
-                      <span>S'abonner</span>
+                      <span>S&apos;abonner</span>
                     </>
                   )}
                 </button>

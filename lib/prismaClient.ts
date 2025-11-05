@@ -1,7 +1,6 @@
 // Lightweight wrapper that tries to import PrismaClient if available, otherwise provides a mock
 let prisma: any = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { PrismaClient } = require('@prisma/client');
   prisma = new PrismaClient();
 } catch (e) {
