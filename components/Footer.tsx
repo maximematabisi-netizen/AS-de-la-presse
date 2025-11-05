@@ -63,7 +63,7 @@ const Footer = () => {
               }} />
               <span className="text-4xl md:text-6xl font-bold">Les As de la presse</span>
             </a>
-            <p className="text-gray-400 text-sm">Votre source d'information en République Démocratique du Congo. Journalisme indépendant, enquêtes et analyses.</p>
+            <p className="text-gray-400 text-sm">Votre source d&apos;information en République Démocratique du Congo. Journalisme indépendant, enquêtes et analyses.</p>
             <div className="mt-4 flex items-center gap-3">
               <a href="https://web.facebook.com/profile.php?id=61577858264984" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-gray-400 hover:text-white">
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -152,7 +152,7 @@ const Footer = () => {
               <h3 className="text-lg font-semibold mb-4">Ressources</h3>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link href="/actualite/privacy" className="hover:text-white">Politique de confidentialité</Link></li>
-                <li><Link href="/actualite/privacy#terms" className="hover:text-white">Conditions d'utilisation</Link></li>
+                <li><Link href="/actualite/privacy#terms" className="hover:text-white">Conditions d&apos;utilisation</Link></li>
                 <li><Link href="/actualite/privacy#cookies" className="hover:text-white">Cookies</Link></li>
               </ul>
             </div>
