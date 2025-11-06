@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { sendNewsletterNotification } from '@/lib/email';
 
 const prisma = new PrismaClient();
 
@@ -63,24 +62,42 @@ export async function POST(req: NextRequest) {
     console.log('Article created successfully:', created);
 
     // Envoyer les notifications aux abonnés si l'article est publié
+    // Import dynamique pour éviter les erreurs si le module email a un problème
     if (created.publishedAt) {
       // Envoyer les emails en arrière-plan (ne pas bloquer la réponse)
-      sendNewsletterNotification({
-        title: created.title,
-        excerpt: created.excerpt,
-        category: created.category,
-        image: created.image,
-        slug: created.slug,
-      }).catch((error) => {
-        // Log l'erreur mais ne pas faire échouer la création d'article
-        console.error('[email] Failed to send newsletter notification:', error);
-      });
+      import('@/lib/email')
+        .then(({ sendNewsletterNotification }) => {
+          return sendNewsletterNotification({
+            title: created.title,
+            excerpt: created.excerpt,
+            category: created.category,
+            image: created.image,
+            slug: created.slug,
+          });
+        })
+        .catch((error) => {
+          // Log l'erreur mais ne pas faire échouer la création d'article
+          console.error('[email] Failed to send newsletter notification:', error);
+        });
     }
 
     return NextResponse.json(created);
-  } catch (e) {
+  } catch (e: any) {
     console.error('Error in POST /api/articles:', e);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
+    console.error('Error details:', {
+      message: e?.message,
+      code: e?.code,
+      name: e?.name,
+      stack: e?.stack,
+    });
+    return NextResponse.json({ 
+      error: e?.message || 'failed',
+      details: process.env.NODE_ENV === 'development' ? {
+        message: e?.message,
+        code: e?.code,
+        name: e?.name,
+      } : undefined
+    }, { status: 500 });
   }
 }
 
