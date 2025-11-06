@@ -148,8 +148,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(article);
     }
     try {
-      const all = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
-      console.log('All articles retrieved successfully:', all);
+      // Récupérer TOUS les articles, triés par date de publication puis création
+      const all = await prisma.article.findMany({ 
+        orderBy: [
+          { publishedAt: 'desc' },
+          { createdAt: 'desc' },
+        ],
+      });
+      console.log('All articles retrieved successfully:', all.length, 'articles');
       return NextResponse.json(all);
     } catch (e: any) {
       // Graceful fallback if tables are not yet migrated

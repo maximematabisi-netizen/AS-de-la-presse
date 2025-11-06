@@ -15,9 +15,13 @@ export default async function Home() {
   let articles: any[] = [];
   try {
     // Filtrer directement dans Prisma pour ne récupérer que les articles publiés
+    // Trier par date de publication (plus récent en premier), puis par date de création
     const fromDb = await prisma.article.findMany({
       where: { publishedAt: { not: null } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { publishedAt: 'desc' },
+        { createdAt: 'desc' },
+      ],
     });
     
     if (fromDb && fromDb.length > 0) {
@@ -60,8 +64,9 @@ export default async function Home() {
   const featuredArticles = articles.slice(0, 3);
   console.log('Featured articles:', featuredArticles);
 
-  // Reste des articles pour la section dernières actualités
+  // TOUS les articles restants pour la section dernières actualités (pas de limite)
   const latestArticles = articles.slice(3);
+  console.log('Latest articles:', latestArticles.length, 'articles');
 
   return (
     <main className="min-h-screen bg-white">
