@@ -8,13 +8,43 @@ import AgentsGallery from './components/AgentsGallery';
 import MostReadSlider from './components/MostReadSlider';
 import prisma from '../../lib/prismaClient';
 
+export const revalidate = 0; // Force le rechargement à chaque requête
+
 export default async function Home() {
   // Charger la BD; en production ne JAMAIS retomber sur les mocks
   let articles: any[] = [];
   try {
-    const fromDb = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
+    // Filtrer directement dans Prisma pour ne récupérer que les articles publiés
+    const fromDb = await prisma.article.findMany({
+      where: { publishedAt: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    
     if (fromDb && fromDb.length > 0) {
-      articles = fromDb.filter((article: any) => article.publishedAt !== null) as any[];
+      // Mapper les articles de la BD au format attendu par ArticleCard
+      articles = fromDb.map((article: any) => ({
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt || '',
+        category: article.category || 'Actualité',
+        date: article.publishedAt 
+          ? new Date(article.publishedAt).toLocaleDateString('fr-FR', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })
+          : article.createdAt 
+            ? new Date(article.createdAt).toLocaleDateString('fr-FR', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })
+            : '',
+        image: article.image || '/images/video-placeholder.png',
+        publishedAt: article.publishedAt,
+        createdAt: article.createdAt,
+      }));
     }
   } catch (e) {
     console.error('Error fetching articles from database:', e);
@@ -24,7 +54,7 @@ export default async function Home() {
     articles = mockArticles as any[];
   }
 
-  console.log('All articles:', articles);
+  console.log('All articles:', articles.length, 'articles found');
 
   // Filtrer les articles à la une (les 3 premiers articles)
   const featuredArticles = articles.slice(0, 3);
@@ -101,6 +131,9 @@ export default async function Home() {
                 date={article.date}
                 image={article.image}
                 slug={article.slug}
+                publishedAt={article.publishedAt ? new Date(article.publishedAt).toISOString() : undefined}
+                views={0}
+                shares={0}
               />
             ))}
           </div>
@@ -128,6 +161,9 @@ export default async function Home() {
                 date={article.date}
                 image={article.image}
                 slug={article.slug}
+                publishedAt={article.publishedAt ? new Date(article.publishedAt).toISOString() : undefined}
+                views={0}
+                shares={0}
               />
             ))}
           </div>
