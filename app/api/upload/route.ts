@@ -14,6 +14,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'file must be an image' }, { status: 400 });
     }
 
+    // Vérifier la taille du fichier (limite Vercel: 4.5MB pour les fonctions serverless)
+    const maxSize = 4.5 * 1024 * 1024; // 4.5MB
+    if (file.size > maxSize) {
+      return NextResponse.json({ 
+        error: `File size exceeds limit of ${maxSize / 1024 / 1024}MB`,
+        code: 'FILE_TOO_LARGE'
+      }, { status: 400 });
+    }
+
     // Générer un nom de fichier unique avec date
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -24,67 +33,96 @@ export async function POST(req: Request) {
     const fileName = `uploads/${datedFolder}/${Date.now()}-${safeName}`;
 
     console.log('Uploading file:', fileName, 'Size:', file.size, 'Type:', file.type);
+    console.log('BLOB_READ_WRITE_TOKEN present:', !!process.env.BLOB_READ_WRITE_TOKEN);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
 
     // Vérifier si Vercel Blob est configuré
-    if (!process.env.BLOB_READ_WRITE_TOKEN && process.env.NODE_ENV === 'production') {
-      console.error('BLOB_READ_WRITE_TOKEN is not set in production');
+    const hasToken = !!process.env.BLOB_READ_WRITE_TOKEN;
+    if (!hasToken) {
+      console.error('BLOB_READ_WRITE_TOKEN is not set');
       return NextResponse.json({ 
-        error: 'Vercel Blob Storage is not configured. Please enable Blob Storage in your Vercel project settings (Settings → Storage → Create Blob).',
+        error: 'Vercel Blob Storage is not configured. Please enable Blob Storage in your Vercel project settings.',
         code: 'BLOB_NOT_CONFIGURED',
-        help: 'Go to https://vercel.com/dashboard → Your Project → Storage → Create Blob'
+        help: 'Go to https://vercel.com/dashboard → Your Project → Storage → Create Blob, then redeploy your project.',
+        details: {
+          hasToken: false,
+          nodeEnv: process.env.NODE_ENV
+        }
       }, { status: 500 });
     }
 
     // Upload vers Vercel Blob Storage
     let blob;
     try {
+      console.log('Attempting to upload to Vercel Blob...');
       blob = await put(fileName, file, {
         access: 'public',
         contentType: file.type,
       });
       console.log('File uploaded successfully:', blob.url);
+      return NextResponse.json({ url: blob.url });
     } catch (blobError: any) {
       console.error('Vercel Blob error:', blobError);
+      console.error('Error type:', typeof blobError);
+      console.error('Error message:', blobError?.message);
+      console.error('Error code:', blobError?.code);
+      console.error('Error stack:', blobError?.stack);
+      
       // Si Vercel Blob n'est pas configuré, retourner une erreur explicite
-      const errorMessage = blobError?.message || '';
-      const errorCode = blobError?.code || '';
+      const errorMessage = String(blobError?.message || '');
+      const errorCode = String(blobError?.code || '');
+      const errorString = JSON.stringify(blobError);
       
       if (errorMessage.includes('BLOB_READ_WRITE_TOKEN') || 
           errorMessage.includes('Unauthorized') ||
           errorMessage.includes('authentication') ||
+          errorMessage.includes('401') ||
+          errorMessage.includes('403') ||
           errorCode === 'UNAUTHORIZED' ||
           errorCode === 'AUTH_ERROR' ||
-          !process.env.BLOB_READ_WRITE_TOKEN) {
+          errorString.includes('token') ||
+          !hasToken) {
         return NextResponse.json({ 
-          error: 'Vercel Blob Storage is not configured. Please enable Blob Storage in your Vercel project settings.',
-          code: 'BLOB_NOT_CONFIGURED',
-          help: 'Go to https://vercel.com/dashboard → Your Project → Storage → Create Blob',
-          details: process.env.NODE_ENV === 'development' ? {
-            message: blobError?.message,
-            code: blobError?.code,
-            hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
-          } : undefined
+          error: 'Vercel Blob Storage authentication failed. Please verify that Blob Storage is properly configured and redeploy your project.',
+          code: 'BLOB_AUTH_ERROR',
+          help: '1. Go to https://vercel.com/dashboard → Your Project → Storage → Verify Blob exists\n2. Go to Settings → Environment Variables → Verify BLOB_READ_WRITE_TOKEN exists\n3. Redeploy your project',
+          details: {
+            hasToken,
+            errorMessage: errorMessage.substring(0, 200),
+            errorCode,
+            nodeEnv: process.env.NODE_ENV
+          }
         }, { status: 500 });
       }
-      throw blobError;
+      
+      // Autres erreurs
+      return NextResponse.json({ 
+        error: 'Failed to upload file to Vercel Blob Storage',
+        code: 'BLOB_UPLOAD_ERROR',
+        details: {
+          message: errorMessage.substring(0, 200),
+          code: errorCode,
+          hasToken
+        }
+      }, { status: 500 });
     }
-
-    return NextResponse.json({ url: blob.url });
   } catch (e: any) {
     console.error('Upload error:', e);
     console.error('Error details:', {
       message: e?.message,
       code: e?.code,
+      name: e?.name,
       stack: e?.stack,
     });
     return NextResponse.json({ 
       error: e?.message || 'upload failed',
-      code: e?.code,
-      details: process.env.NODE_ENV === 'development' ? {
-        message: e?.message,
+      code: e?.code || 'UNKNOWN_ERROR',
+      details: {
+        message: e?.message?.substring(0, 200),
         code: e?.code,
-        stack: e?.stack?.split('\n').slice(0, 5).join('\n'),
-      } : undefined
+        name: e?.name,
+        hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+      }
     }, { status: 500 });
   }
 }
