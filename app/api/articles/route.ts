@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { sendNewsletterNotification } from '@/lib/email';
 
 const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('Received POST request with body:', await req.json());
     const body = await req.json();
+    console.log('Received POST request with body:', body);
     const {
       title,
       slug,
@@ -60,6 +61,22 @@ export async function POST(req: NextRequest) {
 
     const created = await prisma.article.create({ data: createData });
     console.log('Article created successfully:', created);
+
+    // Envoyer les notifications aux abonnés si l'article est publié
+    if (created.publishedAt) {
+      // Envoyer les emails en arrière-plan (ne pas bloquer la réponse)
+      sendNewsletterNotification({
+        title: created.title,
+        excerpt: created.excerpt,
+        category: created.category,
+        image: created.image,
+        slug: created.slug,
+      }).catch((error) => {
+        // Log l'erreur mais ne pas faire échouer la création d'article
+        console.error('[email] Failed to send newsletter notification:', error);
+      });
+    }
+
     return NextResponse.json(created);
   } catch (e) {
     console.error('Error in POST /api/articles:', e);
