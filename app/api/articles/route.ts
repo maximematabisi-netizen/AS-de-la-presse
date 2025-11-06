@@ -180,10 +180,45 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'slug is required' }, { status: 400 });
     }
 
-    const deleted = await prisma.article.delete({ where: { slug } as any });
-    return NextResponse.json(deleted);
-  } catch (e) {
+    // Vérifier si l'article existe
+    const existing = await prisma.article.findUnique({ where: { slug } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+    }
+
+    // Supprimer l'article
+    const deleted = await prisma.article.delete({ where: { slug } });
+    console.log('Article deleted successfully:', { id: deleted.id, slug: deleted.slug, title: deleted.title });
+    
+    return NextResponse.json({ 
+      success: true, 
+      deleted: {
+        id: deleted.id,
+        slug: deleted.slug,
+        title: deleted.title
+      }
+    });
+  } catch (e: any) {
     console.error('Error in DELETE /api/articles:', e);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
+    console.error('Error details:', {
+      message: e?.message,
+      code: e?.code,
+      name: e?.name,
+    });
+    
+    // Si l'article n'existe pas, retourner succès (idempotent)
+    if (e?.code === 'P2025' || e?.message?.includes('Record to delete does not exist')) {
+      console.log('Article already deleted or does not exist');
+      return NextResponse.json({ success: true, message: 'Article already deleted' });
+    }
+    
+    return NextResponse.json({ 
+      error: e?.message || 'failed',
+      details: process.env.NODE_ENV === 'development' ? {
+        message: e?.message,
+        code: e?.code,
+        name: e?.name,
+      } : undefined
+    }, { status: 500 });
   }
 }

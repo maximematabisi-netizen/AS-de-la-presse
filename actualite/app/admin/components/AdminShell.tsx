@@ -74,35 +74,32 @@ export default function AdminShell() {
     } catch (e) {}
   }, [articles, hydrated]);
 
-  // After hydration, try to load authoritative articles from the server and merge
+  // After hydration, try to load authoritative articles from the server
+  // Le serveur est la source de vérité - les articles supprimés ne seront plus dans la liste
   useEffect(() => {
     if (!hydrated) return;
     (async () => {
       try {
-        const r = await fetch('/api/articles');
+        const r = await fetch('/api/articles', { cache: 'no-store' });
         if (!r.ok) return;
         const serverArticles = await r.json();
         if (!Array.isArray(serverArticles)) return;
 
-        setArticles((local) => {
-          // keep locally-unsynced items (synced === false) and prepend server articles
-          const localUnsynced = (local || []).filter((a: any) => a.synced === false || a.synced === undefined);
-          // remove duplicates by slug: prefer server version
-          const merged = [...serverArticles, ...localUnsynced];
-          const seen = new Set();
-          return merged.filter((it: any) => {
-            if (!it || !it.slug) return false;
-            if (seen.has(it.slug)) return false;
-            seen.add(it.slug);
-            return true;
-          });
-        });
-        console.log('Admin: merged server articles into local state', serverArticles.length);
+        // Utiliser uniquement les articles du serveur (source de vérité)
+        // Les articles supprimés ne seront plus dans la liste serveur
+        const mappedArticles = serverArticles.map((a: any) => ({
+          ...a,
+          author: { name: user?.username || 'Admin' },
+          synced: true
+        }));
+        
+        setArticles(mappedArticles);
+        console.log('Admin: loaded articles from server (source of truth)', serverArticles.length);
       } catch (e) {
         console.error('Admin: failed to fetch server articles', e);
       }
     })();
-  }, [hydrated]);
+  }, [hydrated, user]);
 
   const logout = async () => {
     try {
@@ -253,12 +250,36 @@ export default function AdminShell() {
         method: 'DELETE',
       });
       if (res.ok) {
+        // Retirer l'article de la liste locale immédiatement
         setArticles(prev => prev.filter(a => a.slug !== slug));
+        
+        // Rafraîchir la liste complète depuis le serveur après un court délai
+        setTimeout(async () => {
+          try {
+            const refreshRes = await fetch('/api/articles');
+            if (refreshRes.ok) {
+              const serverArticles = await refreshRes.json();
+              if (Array.isArray(serverArticles)) {
+                setArticles(serverArticles.map((a: any) => ({
+                  ...a,
+                  author: { name: user?.username || 'Admin' },
+                  synced: true
+                })));
+                console.log('Articles list refreshed after deletion:', serverArticles.length);
+              }
+            }
+          } catch (e) {
+            console.error('Failed to refresh articles list after deletion:', e);
+          }
+        }, 300);
       } else {
-        console.error('Failed to delete article on server');
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Failed to delete article on server:', res.status, errorData);
+        alert(`Erreur lors de la suppression: ${errorData.error || 'Erreur inconnue'}`);
       }
     } catch (e) {
       console.error('Error while deleting article:', e);
+      alert('Erreur lors de la suppression de l\'article');
     }
   };
 
