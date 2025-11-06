@@ -1,78 +1,57 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { prisma } from '@/lib/prismaClient';
+
+// Validation simple de l'email
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json().catch(() => null);
+    const data = await request.json().catch(() => ({}));
     const email = (data?.email || '').toString().trim().toLowerCase();
+    
+    // Validation de l'email
     if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Missing or invalid email' }, { status: 400 });
+      return NextResponse.json({ error: 'Email requis' }, { status: 400 });
+    }
+    
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: 'Format d\'email invalide' }, { status: 400 });
     }
 
-    const base = process.cwd();
-    const dataDir = path.join(base, 'actualite', 'data');
-    const filePath = path.join(dataDir, 'newsletter_signups.json');
-
-    // Ensure data directory exists
-    await fs.mkdir(dataDir, { recursive: true });
-
-    // Read existing file or start with empty array
-    let arr: Array<any> = [];
+    // Sauvegarder dans la base de données Prisma
     try {
-      const raw = await fs.readFile(filePath, 'utf8');
-      arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) arr = [];
-    } catch (e) {
-      // ignore, we'll create the file
-    }
-
-    // Deduplicate (case-insensitive)
-    const exists = arr.some((x) => String(x.email).toLowerCase() === email);
-    if (exists) {
-      // Try to persist to Prisma (idempotent attempt) but still return success
-      try {
-        const { default: prisma } = await import('../../../../lib/prismaClient');
-        if (prisma?.newsletterSubscriber) {
-          await prisma.newsletterSubscriber.upsert({
-            where: { email },
-            update: {},
-            create: { email },
-          });
-        }
-      } catch (e) {
-        // ignore persistence errors for idempotent case
+      // Utiliser upsert pour éviter les doublons (email est unique dans le schéma)
+      await prisma.newsletterSubscriber.upsert({
+        where: { email },
+        update: {}, // Si l'email existe déjà, on ne fait rien
+        create: { email },
+      });
+      
+      console.log('[newsletter] subscription saved:', email);
+      return NextResponse.json({ ok: true, message: 'Inscription réussie' });
+    } catch (dbError: any) {
+      console.error('[newsletter] database error:', dbError);
+      
+      // Si l'email existe déjà (contrainte unique), retourner succès (idempotent)
+      if (dbError?.code === 'P2002' || dbError?.meta?.target?.includes('email')) {
+        console.log('[newsletter] email already exists:', email);
+        return NextResponse.json({ ok: true, duplicate: true, message: 'Vous êtes déjà inscrit' });
       }
-      return NextResponse.json({ ok: true, duplicate: true });
+      
+      // Autres erreurs de base de données
+      return NextResponse.json({ 
+        error: 'Erreur lors de l\'inscription à la newsletter',
+        details: process.env.NODE_ENV === 'development' ? dbError?.message : undefined
+      }, { status: 500 });
     }
-
-    // Append the new signup with metadata
-    const entry = { email, createdAt: new Date().toISOString() };
-    arr.push(entry);
-
-    await fs.writeFile(filePath, JSON.stringify(arr, null, 2), 'utf8');
-
-    // eslint-disable-next-line no-console
-    console.log('[newsletter] signup saved:', entry);
-
-    // Attempt to persist to Prisma if available (best-effort)
-    try {
-      const { default: prisma } = await import('../../../../lib/prismaClient');
-      if (prisma?.newsletterSubscriber) {
-        await prisma.newsletterSubscriber.create({ data: { email } });
-        // eslint-disable-next-line no-console
-        console.log('[newsletter] saved to prisma:', email);
-      }
-    } catch (e) {
-  // If Prisma not available or model not migrated yet, ignore - file persistence remains.
-  // eslint-disable-next-line no-console
-  console.warn('[newsletter] prisma persistence skipped or failed', (e as any)?.message || e);
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[newsletter] error', err);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } catch (err: any) {
+    console.error('[newsletter] error:', err);
+    return NextResponse.json({ 
+      error: 'Erreur lors de l\'inscription à la newsletter',
+      details: process.env.NODE_ENV === 'development' ? err?.message : undefined
+    }, { status: 500 });
   }
 }
