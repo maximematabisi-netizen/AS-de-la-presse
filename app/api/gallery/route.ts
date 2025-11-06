@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prismaClient';
 
 export async function GET() {
   try {
     const items = await prisma.galleryItem.findMany({ orderBy: { createdAt: 'desc' } });
     return NextResponse.json(items);
-  } catch (e) {
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
+  } catch (e: any) {
+    console.error('Gallery GET failed:', e);
+    return NextResponse.json({ error: e?.message || 'failed', details: process.env.NODE_ENV === 'development' ? e?.stack : undefined }, { status: 500 });
   }
 }
 
@@ -16,12 +15,38 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { title, imageUrl } = body || {};
-    if (!imageUrl) return NextResponse.json({ error: 'imageUrl required' }, { status: 400 });
-    const created = await prisma.galleryItem.create({ data: { title: title || null, imageUrl } });
+    console.log('Gallery POST request:', { title, imageUrl: imageUrl?.substring(0, 50) + '...' });
+    
+    if (!imageUrl) {
+      console.error('Gallery POST: imageUrl is required');
+      return NextResponse.json({ error: 'imageUrl required' }, { status: 400 });
+    }
+    
+    const created = await prisma.galleryItem.create({ 
+      data: { 
+        title: title || null, 
+        imageUrl 
+      } 
+    });
+    
+    console.log('Gallery item created successfully:', created.id);
     return NextResponse.json(created);
   } catch (e: any) {
     console.error('Gallery POST failed:', e);
-    return NextResponse.json({ error: e?.message || 'failed' }, { status: 500 });
+    console.error('Error details:', {
+      message: e?.message,
+      code: e?.code,
+      meta: e?.meta,
+      stack: e?.stack,
+    });
+    return NextResponse.json({ 
+      error: e?.message || 'failed',
+      details: process.env.NODE_ENV === 'development' ? {
+        message: e?.message,
+        code: e?.code,
+        meta: e?.meta,
+      } : undefined
+    }, { status: 500 });
   }
 }
 
