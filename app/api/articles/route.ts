@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Vérifier si l'article existe déjà (par slug)
+    const existing = await prisma.article.findUnique({ where: { slug } });
+    
     const createData: any = {
       title,
       slug,
@@ -52,14 +55,23 @@ export async function POST(req: NextRequest) {
       category: category || 'Actualité',
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
       image: imageToStore,
+      synced: true,
+      syncedAt: new Date(),
     };
 
-    // mark as synced since we create it server-side
-    createData.synced = true;
-    createData.syncedAt = new Date();
-
-    const created = await prisma.article.create({ data: createData });
-    console.log('Article created successfully:', created);
+    // Utiliser upsert pour créer ou mettre à jour l'article
+    const created = await prisma.article.upsert({
+      where: { slug },
+      update: createData,
+      create: createData,
+    });
+    
+    console.log('Article created/updated successfully:', {
+      id: created.id,
+      slug: created.slug,
+      title: created.title,
+      publishedAt: created.publishedAt,
+    });
 
     // Envoyer les notifications aux abonnés si l'article est publié
     // Import dynamique pour éviter les erreurs si le module email a un problème

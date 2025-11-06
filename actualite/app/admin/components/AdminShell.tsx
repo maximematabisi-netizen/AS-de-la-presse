@@ -126,14 +126,42 @@ export default function AdminShell() {
         });
         if (r.ok) {
           const created = await r.json();
+          console.log('Article created on server:', created);
+          
+          // Ajouter l'article à la liste locale
           setArticles(prev => {
             const exists = prev.find((p: any) => p.slug === created.slug);
-            if (exists) return prev.map((p: any) => p.slug === created.slug ? { ...p, ...created } : p);
-            return [{ ...created, author: { name: user?.username || 'Admin' } }, ...prev];
+            if (exists) {
+              return prev.map((p: any) => p.slug === created.slug ? { ...p, ...created, synced: true } : p);
+            }
+            return [{ ...created, author: { name: user?.username || 'Admin' }, synced: true }, ...prev];
           });
+          
           setSavingStatus('saved-server');
+          
+          // Recharger la liste complète depuis le serveur après un court délai
+          setTimeout(async () => {
+            try {
+              const refreshRes = await fetch('/api/articles');
+              if (refreshRes.ok) {
+                const serverArticles = await refreshRes.json();
+                if (Array.isArray(serverArticles)) {
+                  setArticles(serverArticles.map((a: any) => ({
+                    ...a,
+                    author: { name: user?.username || 'Admin' },
+                    synced: true
+                  })));
+                  console.log('Articles list refreshed from server:', serverArticles.length);
+                }
+              }
+            } catch (e) {
+              console.error('Failed to refresh articles list:', e);
+            }
+          }, 500);
         } else {
-          throw new Error('server returned non-ok');
+          const errorData = await r.json().catch(() => ({}));
+          console.error('Server returned error:', r.status, errorData);
+          throw new Error(errorData.error || 'server returned non-ok');
         }
       } catch (e) {
         // fallback to local-only
