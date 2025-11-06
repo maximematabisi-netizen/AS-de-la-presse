@@ -25,6 +25,16 @@ export async function POST(req: Request) {
 
     console.log('Uploading file:', fileName, 'Size:', file.size, 'Type:', file.type);
 
+    // Vérifier si Vercel Blob est configuré
+    if (!process.env.BLOB_READ_WRITE_TOKEN && process.env.NODE_ENV === 'production') {
+      console.error('BLOB_READ_WRITE_TOKEN is not set in production');
+      return NextResponse.json({ 
+        error: 'Vercel Blob Storage is not configured. Please enable Blob Storage in your Vercel project settings (Settings → Storage → Create Blob).',
+        code: 'BLOB_NOT_CONFIGURED',
+        help: 'Go to https://vercel.com/dashboard → Your Project → Storage → Create Blob'
+      }, { status: 500 });
+    }
+
     // Upload vers Vercel Blob Storage
     let blob;
     try {
@@ -36,13 +46,24 @@ export async function POST(req: Request) {
     } catch (blobError: any) {
       console.error('Vercel Blob error:', blobError);
       // Si Vercel Blob n'est pas configuré, retourner une erreur explicite
-      if (blobError?.message?.includes('BLOB_READ_WRITE_TOKEN') || 
-          blobError?.message?.includes('Unauthorized') ||
-          blobError?.code === 'UNAUTHORIZED') {
+      const errorMessage = blobError?.message || '';
+      const errorCode = blobError?.code || '';
+      
+      if (errorMessage.includes('BLOB_READ_WRITE_TOKEN') || 
+          errorMessage.includes('Unauthorized') ||
+          errorMessage.includes('authentication') ||
+          errorCode === 'UNAUTHORIZED' ||
+          errorCode === 'AUTH_ERROR' ||
+          !process.env.BLOB_READ_WRITE_TOKEN) {
         return NextResponse.json({ 
-          error: 'Vercel Blob Storage is not configured. Please enable it in your Vercel project settings.',
+          error: 'Vercel Blob Storage is not configured. Please enable Blob Storage in your Vercel project settings.',
           code: 'BLOB_NOT_CONFIGURED',
-          details: process.env.NODE_ENV === 'development' ? blobError?.message : undefined
+          help: 'Go to https://vercel.com/dashboard → Your Project → Storage → Create Blob',
+          details: process.env.NODE_ENV === 'development' ? {
+            message: blobError?.message,
+            code: blobError?.code,
+            hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+          } : undefined
         }, { status: 500 });
       }
       throw blobError;

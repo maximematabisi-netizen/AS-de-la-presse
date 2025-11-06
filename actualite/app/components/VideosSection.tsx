@@ -7,10 +7,17 @@ export default function VideosSection() {
   const [meta, setMeta] = useState<Record<string, { title?: string; thumbnail?: string; _notFound?: boolean }>>({});
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('admin:videos');
-      if (raw) setVideos(JSON.parse(raw));
-    } catch (e) {}
+    (async () => {
+      try {
+        const r = await fetch('/api/videos', { cache: 'no-store' });
+        if (r.ok) {
+          const videoIds = await r.json();
+          setVideos(videoIds || []);
+        }
+      } catch (e) {
+        console.error('Failed to load videos:', e);
+      }
+    })();
   }, []);
 
   const extractId = (input: string | null | undefined) => {
