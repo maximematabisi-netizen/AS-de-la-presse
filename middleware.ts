@@ -22,10 +22,12 @@ async function isAuthenticated(req: NextRequest) {
 }
 
 export async function middleware(req: NextRequest) {
-  if (req.nextUrl.pathname.startsWith('/admin')) {
+  // Protéger les routes admin
+  if (req.nextUrl.pathname.startsWith('/actualite/admin') && 
+      !req.nextUrl.pathname.startsWith('/actualite/admin/login')) {
     const ok = await isAuthenticated(req)
     if (!ok) {
-      const loginUrl = new URL('/admin/login', req.url)
+      const loginUrl = new URL('/actualite/admin/login', req.url)
       loginUrl.searchParams.set('next', req.nextUrl.pathname)
       return NextResponse.redirect(loginUrl)
     }
@@ -34,5 +36,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*']
+  matcher: ['/actualite/admin/:path*']
 }

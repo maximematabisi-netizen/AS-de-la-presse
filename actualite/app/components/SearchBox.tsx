@@ -15,15 +15,15 @@ export default function SearchBox({ placeholder = 'Rechercher...', autoFocus = f
   };
 
   return (
-    <form onSubmit={submit} className="flex items-center">
+    <form onSubmit={submit} className="flex items-center w-full">
       <input
         autoFocus={autoFocus}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder={placeholder}
-        className="px-3 py-1 rounded-l-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-l-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <button type="submit" className="px-3 py-1 bg-blue-600 text-white rounded-r-md text-sm">Rechercher</button>
+      <button type="submit" className="px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-600 text-white rounded-r-md text-xs sm:text-sm whitespace-nowrap">Rechercher</button>
     </form>
   );
 }

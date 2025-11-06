@@ -1,8 +1,25 @@
 import ArticleCard from '../../components/ArticleCard';
-import mockArticles from '../../data/mockArticles';
+import prisma from '../../../../lib/prismaClient';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default function FemmePage() {
-  const femmeArticles = mockArticles.filter(article => article.category === 'Femme');
+export default async function FemmePage() {
+  let femmeArticles: any[] = [];
+  try {
+    const fromDb = await prisma.article.findMany({
+      where: { category: 'Femme', publishedAt: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    femmeArticles = (fromDb || []).map((a: any) => ({
+      id: a.id,
+      title: a.title || a.slug,
+      excerpt: a.excerpt || '',
+      category: a.category || 'Femme',
+      date: (a.publishedAt || a.createdAt) ? new Date(a.publishedAt || a.createdAt).toLocaleDateString('fr-FR') : '',
+      image: a.image || '/placeholder.png',
+      slug: a.slug,
+    }));
+  } catch (e) {}
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">

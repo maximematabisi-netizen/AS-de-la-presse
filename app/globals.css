@@ -22,6 +22,11 @@
   }
 }
 
+/* Smooth scrolling across the site */
+html {
+  scroll-behavior: smooth;
+}
+
 @layer components {
   .prose {
     @apply max-w-none;
@@ -102,6 +107,17 @@
   .logo-animate-home { animation: none !important; }
 }
 
+/* Marquee animation for AgentsGallery */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  animation: marquee 30s linear infinite;
+}
+
 /* Smooth hover and focus defaults for links and buttons */
 @layer components {
   a, button {
@@ -120,4 +136,54 @@
   .dark a {
     color: #93c5fd; /* blue-300 */
   }
+}
+
+/* Reusable base transition utility for interactive blocks/cards */
+.transition-base {
+  transition: all 200ms ease-in-out;
+}
+
+/* Social media icons animations */
+@keyframes socialHover {
+  0% {
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: scale(1.25) translateY(-8px) rotate(var(--rotate, 0deg));
+  }
+}
+
+.social-icon {
+  display: inline-block;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.social-icon:hover {
+  transform: scale(1.25) translateY(-8px) rotate(var(--rotate, 0deg));
+}
+
+.social-icon-facebook:hover {
+  transform: scale(1.25) translateY(-8px) rotate(6deg);
+  color: #1877f2;
+}
+
+.social-icon-twitter:hover {
+  transform: scale(1.25) translateY(-8px) rotate(-6deg);
+  color: #000000;
+}
+
+.social-icon-instagram:hover {
+  transform: scale(1.25) translateY(-8px) rotate(12deg);
+  color: #e4405f;
+}
+
+.social-icon-linkedin:hover {
+  transform: scale(1.25) translateY(-8px) rotate(6deg);
+  color: #0077b5;
+}
+
+.social-icon-youtube:hover {
+  transform: scale(1.25) translateY(-8px) rotate(-6deg);
+  color: #ff0000;
 }

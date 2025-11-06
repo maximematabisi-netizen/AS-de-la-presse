@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
       category: category || 'Actualité',
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
       image: imageToStore,
-      highlightedQuote: (body as any).highlightedQuote || null,
     };
 
     // mark as synced since we create it server-side
@@ -102,9 +101,19 @@ export async function GET(req: NextRequest) {
       console.log('Article retrieved successfully:', { id: article.id, slug: article.slug, title: article.title });
       return NextResponse.json(article);
     }
-    const all = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
-    console.log('All articles retrieved successfully:', all);
-    return NextResponse.json(all);
+    try {
+      const all = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
+      console.log('All articles retrieved successfully:', all);
+      return NextResponse.json(all);
+    } catch (e: any) {
+      // Graceful fallback if tables are not yet migrated
+      const msg = String(e?.message || e || '');
+      if (msg.includes('does not exist') || msg.includes('relation') || msg.includes('table')) {
+        console.warn('Articles table not found yet, returning empty list');
+        return NextResponse.json([]);
+      }
+      throw e;
+    }
   } catch (e) {
     console.error('Error in GET /api/articles:', e);
     return NextResponse.json({ error: 'failed' }, { status: 500 });

@@ -3,6 +3,12 @@ import prisma from '../../../../lib/prismaClient';
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({
+        error: 'DATABASE_URL manquant. Configurez .env.local puis relancez le serveur.',
+        hint: 'Ajoutez DATABASE_URL=postgresql://user:pass@host:port/db et exécutez `npx prisma generate && npx prisma migrate dev`'
+      }, { status: 400 });
+    }
     const body = await req.json();
     if (!Array.isArray(body)) return NextResponse.json({ error: 'expected array' }, { status: 400 });
 

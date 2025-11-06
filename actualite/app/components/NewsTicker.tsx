@@ -36,13 +36,26 @@ const NewsTicker = () => {
     return () => cancelAnimationFrame(animationId);
   }, [running]);
 
-  const [articles, setArticles] = useState<typeof mockArticles>(mockArticles);
+  const [articles, setArticles] = useState<typeof mockArticles>(process.env.NODE_ENV === 'production' ? [] as any : mockArticles);
 
   // attempt to hydrate from admin localStorage on client
   useEffect(() => {
+    // En production: charger depuis l'API serveur et ignorer le mock/local
+    if (process.env.NODE_ENV === 'production') {
+      (async () => {
+        try {
+          const r = await fetch('/api/articles');
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data)) setArticles(data);
+          }
+        } catch (e) {}
+      })();
+    }
+
     try {
       const raw = localStorage.getItem('admin:articles');
-      if (raw) setArticles(JSON.parse(raw));
+      if (raw && process.env.NODE_ENV !== 'production') setArticles(JSON.parse(raw));
     } catch (e) {}
 
     // listen for admin-driven updates in the same tab
@@ -60,8 +73,14 @@ const NewsTicker = () => {
         if (raw) setArticles(JSON.parse(raw));
       } catch (e) {}
     };
-    window.addEventListener('admin:articles:changed', handler as EventListener);
-    return () => window.removeEventListener('admin:articles:changed', handler as EventListener);
+    if (process.env.NODE_ENV !== 'production') {
+      window.addEventListener('admin:articles:changed', handler as EventListener);
+    }
+    return () => {
+      if (process.env.NODE_ENV !== 'production') {
+        window.removeEventListener('admin:articles:changed', handler as EventListener);
+      }
+    };
   }, []);
 
   const items = articles.map((a) => ({

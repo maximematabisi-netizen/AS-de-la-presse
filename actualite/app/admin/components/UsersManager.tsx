@@ -2,67 +2,226 @@
 
 import { useEffect, useState } from 'react';
 
-const DEFAULT_USERS = [
-  { id: 1, username: 'alice', role: 'admin' },
-  { id: 2, username: 'bob', role: 'editor' },
-  { id: 3, username: 'carol', role: 'writer' },
-];
+interface User {
+  id: number;
+  username: string;
+  email: string | null;
+  role: string;
+  createdAt: string;
+}
 
 export default function UsersManager() {
-  const [users, setUsers] = useState<any[]>(() => {
-    try {
-      const raw = localStorage.getItem('admin:users');
-      return raw ? JSON.parse(raw) : DEFAULT_USERS;
-    } catch (e) { return DEFAULT_USERS; }
-  });
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState('admin');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    try { localStorage.setItem('admin:users', JSON.stringify(users)); } catch (e) {}
-  }, [users]);
+    loadUsers();
+  }, []);
 
-  const setRole = (id: number, role: string) => setUsers((prev: any[]) => prev.map((u: any) => u.id === id ? { ...u, role } : u));
-
-  const addUser = (username: string, role: string) => {
-    setUsers(prev => {
-      const id = prev.length ? Math.max(...prev.map(p => p.id)) + 1 : 1;
-      return [{ id, username, role }, ...prev];
-    });
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/auth/users');
+      if (!res.ok) throw new Error('Erreur lors du chargement');
+      const data = await res.json();
+      setUsers(data.users || []);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement des utilisateurs');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const [newUser, setNewUser] = useState('');
-  const [newRole, setNewRole] = useState('writer');
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!newUsername.trim() || !newPassword.trim()) {
+      setError('Le nom d\'utilisateur et le mot de passe sont requis');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: newUsername.trim(),
+          email: newEmail.trim() || null,
+          password: newPassword,
+          role: newRole,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Erreur lors de la création');
+        return;
+      }
+
+      setSuccess('Utilisateur créé avec succès');
+      setNewUsername('');
+      setNewEmail('');
+      setNewPassword('');
+      setNewRole('admin');
+      setShowAddForm(false);
+      loadUsers();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la création');
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/auth/users?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Erreur lors de la suppression');
+        return;
+      }
+
+      setSuccess('Utilisateur supprimé avec succès');
+      loadUsers();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la suppression');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+        <p className="text-gray-500">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-      <h3 className="font-semibold mb-3">Utilisateurs</h3>
-      <div className="space-y-2">
-        <div className="p-2 border rounded mb-3">
-          <div className="text-sm font-medium mb-2">Ajouter un rédacteur</div>
-          <div className="flex gap-2">
-            <input className="p-2 rounded border flex-1" placeholder="Nom d'utilisateur" value={newUser} onChange={(e) => setNewUser(e.target.value)} />
-            <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className="p-2 rounded">
-              <option value="writer">Rédacteur</option>
-              <option value="editor">Éditeur</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button className="px-3 py-2 bg-blue-600 text-white rounded" onClick={() => { if (!newUser.trim()) return; addUser(newUser.trim(), newRole); setNewUser(''); setNewRole('writer'); }}>Ajouter</button>
-          </div>
+    <div className="bg-white dark:bg-gray-800 p-6 rounded shadow">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-semibold">Gestion des utilisateurs admin</h3>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {showAddForm ? 'Annuler' : '+ Ajouter un utilisateur'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+          {error}
         </div>
-        {users.map((u: any) => (
-          <div key={u.id} className="flex items-center justify-between p-2 border rounded">
+      )}
+
+      {success && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded">
+          {success}
+        </div>
+      )}
+
+      {showAddForm && (
+        <form onSubmit={handleAddUser} className="mb-6 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700">
+          <h4 className="font-semibold mb-3">Nouvel utilisateur</h4>
+          <div className="space-y-3">
             <div>
-              <div className="font-medium">{u.username}</div>
-              <div className="text-sm text-gray-500">Rôle actuel: {u.role}</div>
+              <label className="block text-sm font-medium mb-1">Nom d'utilisateur *</label>
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                className="w-full p-2 border rounded"
+                required
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <select value={u.role} onChange={(e) => setRole(u.id, e.target.value)} className="p-1 rounded">
-                <option value="writer">Rédacteur</option>
-                <option value="editor">Éditeur</option>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email (optionnel)</label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Mot de passe *</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full p-2 border rounded"
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Rôle</label>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="w-full p-2 border rounded"
+              >
                 <option value="admin">Admin</option>
+                <option value="editor">Éditeur</option>
+                <option value="writer">Rédacteur</option>
               </select>
             </div>
+            <button
+              type="submit"
+              className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Créer l'utilisateur
+            </button>
           </div>
-        ))}
+        </form>
+      )}
+
+      <div className="space-y-3">
+        {users.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">Aucun utilisateur trouvé</p>
+        ) : (
+          users.map((user) => (
+            <div
+              key={user.id}
+              className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="flex-1">
+                <div className="font-medium text-lg">{user.username}</div>
+                {user.email && (
+                  <div className="text-sm text-gray-500">{user.email}</div>
+                )}
+                <div className="text-sm text-gray-500">
+                  Rôle: <span className="font-semibold">{user.role}</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  Créé le: {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDeleteUser(user.id)}
+                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              >
+                Supprimer
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

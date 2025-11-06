@@ -12,7 +12,6 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
   const [publishAt, setPublishAt] = useState(initial?.publishedAt || '');
   const [imageUrl, setImageUrl] = useState(initial?.image || '');
   const [imagePreview, setImagePreview] = useState<string | null>(initial?.image || null);
-  const [highlightedQuote, setHighlightedQuote] = useState(initial?.highlightedQuote || '');
 
   const onFile = (f?: File) => {
     if (!f) return;
@@ -48,11 +47,10 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
       console.warn('upload failed', e);
     }
 
-    onSave({ title, slug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image, highlightedQuote });
+    onSave({ title, slug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image });
     if (!initial) {
       setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setPublishAt(''); setImageUrl(''); setImagePreview(null);
       setIsBreaking(false);
-      setHighlightedQuote(''); // Reset the highlightedQuote field
     }
   };
 
@@ -107,20 +105,7 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
 
       <label className="block text-sm">Planifier (date/heure)</label>
       <input type="datetime-local" className="w-full mb-3 p-2 rounded" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
-      <div className="mb-4">
-        <label htmlFor="highlightedQuote" className="block text-sm font-medium text-gray-700">
-          Citation importante (optionnel)
-        </label>
-        <textarea
-          id="highlightedQuote"
-          name="highlightedQuote"
-          rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          placeholder="Entrez une citation importante à mettre en valeur"
-          value={highlightedQuote || ''}
-          onChange={(e) => setHighlightedQuote(e.target.value)}
-        />
-      </div>
+      
 
       <div className="flex gap-2">
         <button className="flex-1 bg-blue-600 text-white py-2 rounded">{initial ? 'Mettre à jour' : 'Enregistrer'}</button>

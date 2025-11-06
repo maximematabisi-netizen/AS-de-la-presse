@@ -5,14 +5,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-<<<<<<< HEAD
-  url      = env("postgresql://neondb_owner:npg_XjOV1mzR8deK@ep-dry-resonance-ahp9aftx-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
-  directUrl = env("postgresql://neondb_owner:npg_XjOV1mzR8deK@ep-dry-resonance-ahp9aftx-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
-
-=======
   url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
->>>>>>> 897776c (Fix Prisma schema to use env DATABASE_URL/DIRECT_URL)
 }
 
 model Article {
@@ -34,13 +28,24 @@ model Article {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  username String @unique
-  role     String
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String?  @unique
+  password  String   // Hash du mot de passe
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model NewsletterSubscriber {
   id        Int      @id @default(autoincrement())
   email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model GalleryItem {
+  id        Int      @id @default(autoincrement())
+  title     String?
+  imageUrl  String
   createdAt DateTime @default(now())
 }

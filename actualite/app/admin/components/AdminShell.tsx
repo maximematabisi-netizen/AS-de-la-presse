@@ -1,42 +1,71 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ArticleList from './ArticleList';
 import ArticleForm from './ArticleForm';
 import Dashboard from './Dashboard';
 import BannersManager from './BannersManager';
 import UsersManager from './UsersManager';
 import VideosManager from './VideosManager';
+import GalleryManager from './GalleryManager';
 import mockArticles from '../../data/mockArticles';
 
+interface User {
+  userId: number;
+  username: string;
+  role: string;
+}
+
 export default function AdminShell() {
-  // Defer reading localStorage until after hydration to avoid SSR/client HTML mismatch
+  const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<any[]>(mockArticles);
   const [selected, setSelected] = useState<any | null>(null);
-  const [tab, setTab] = useState<'articles'|'dashboard'|'banners'|'users'|'videos'>('articles');
+  const [tab, setTab] = useState<'articles'|'dashboard'|'banners'|'users'|'videos'|'gallery'>('articles');
   const [savingStatus, setSavingStatus] = useState<'idle'|'saving'|'saved-server'|'saved-local'|'error'>('idle');
 
-  // On mount, load persisted state from localStorage
+  // Vérifier la session au chargement
   useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data.authenticated) {
+          setUser(data.user);
+        } else {
+          router.push('/actualite/admin/login');
+          return;
+        }
+      } catch (err) {
+        router.push('/actualite/admin/login');
+        return;
+      } finally {
+        setLoading(false);
+        setHydrated(true);
+      }
+    };
+    checkSession();
+  }, [router]);
+
+  // Charger les articles depuis localStorage après hydration
+  useEffect(() => {
+    if (!hydrated) return;
     try {
-      const rawUser = localStorage.getItem('admin:user');
       const rawArticles = localStorage.getItem('admin:articles');
-      if (rawUser) setUser(JSON.parse(rawUser));
       if (rawArticles) setArticles(JSON.parse(rawArticles));
     } catch (e) {
-      // ignore parse errors and fall back to defaults
+      // ignore parse errors
     }
-    setHydrated(true);
-  }, []);
+  }, [hydrated]);
 
-  // Persist after hydration only
+  // Persist articles after hydration
   useEffect(() => {
     if (!hydrated) return;
     try {
       localStorage.setItem('admin:articles', JSON.stringify(articles));
-      // dispatch a custom event so other components on the page can react immediately
       try {
         window.dispatchEvent(new CustomEvent('admin:articles:changed', { detail: articles }));
       } catch (e) {
@@ -44,11 +73,6 @@ export default function AdminShell() {
       }
     } catch (e) {}
   }, [articles, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try { localStorage.setItem('admin:user', JSON.stringify(user)); } catch (e) {}
-  }, [user, hydrated]);
 
   // After hydration, try to load authoritative articles from the server and merge
   useEffect(() => {
@@ -80,8 +104,15 @@ export default function AdminShell() {
     })();
   }, [hydrated]);
 
-  const login = (username: string, role: string) => setUser({ username, role });
-  const logout = () => setUser(null);
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      // ignore
+    }
+    setUser(null);
+    router.push('/actualite/admin/login');
+  };
 
   const upsert = (article: any) => {
     // Try to persist server-side, but fall back to local state if server not available
@@ -160,9 +191,17 @@ export default function AdminShell() {
         body: JSON.stringify(arr),
       });
       if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        console.error('Force resync failed', j);
-        alert('Resync failed, see console');
+        let msg = 'unknown error';
+        try {
+          const j = await r.json();
+          console.error('Force resync failed', j);
+          msg = j?.error || JSON.stringify(j);
+        } catch (e) {
+          const t = await r.text();
+          console.error('Force resync failed (text)', t);
+          msg = t;
+        }
+        alert('Resync failed: ' + msg);
         return;
       }
       const j = await r.json();
@@ -199,10 +238,8 @@ export default function AdminShell() {
     setArticles(prev => prev.map(a => a.slug === slug ? { ...a, isBreaking: !a.isBreaking } : a));
   };
 
-  // While waiting for hydration, render a simple placeholder that's identical between
-  // server and client to avoid hydration mismatch. After hydration completes we show
-  // the login form or admin shell depending on auth state.
-  if (!hydrated) {
+  // While waiting for authentication check, show loading
+  if (!hydrated || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="bg-white dark:bg-gray-800 p-6 rounded shadow w-full max-w-md">
@@ -213,14 +250,7 @@ export default function AdminShell() {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded shadow w-full max-w-md">
-          <h2 className="text-xl font-bold mb-4">Connexion Admin (prototype)</h2>
-          <LoginForm onLogin={login} />
-        </div>
-      </div>
-    );
+    return null; // Will redirect to login
   }
 
   return (
@@ -249,6 +279,7 @@ export default function AdminShell() {
             <button className={`px-3 py-1 rounded ${tab==='banners'?'bg-blue-600 text-white':''}`} onClick={() => setTab('banners')}>Bannières</button>
             <button className={`px-3 py-1 rounded ${tab==='users'?'bg-blue-600 text-white':''}`} onClick={() => setTab('users')}>Utilisateurs</button>
             <button className={`px-3 py-1 rounded ${tab==='videos'?'bg-blue-600 text-white':''}`} onClick={() => setTab('videos')}>Vidéos</button>
+            <button className={`px-3 py-1 rounded ${tab==='gallery'?'bg-blue-600 text-white':''}`} onClick={() => setTab('gallery')}>Galerie</button>
           </nav>
         </div>
 
@@ -259,6 +290,7 @@ export default function AdminShell() {
             {tab === 'banners' && <BannersManager />}
             {tab === 'users' && <UsersManager />}
             {tab === 'videos' && <VideosManager />}
+            {tab === 'gallery' && <GalleryManager />}
           </div>
           <div>
             {tab === 'articles' && <ArticleForm onSave={upsert} initial={selected} onCancel={() => setSelected(null)} />}
@@ -266,6 +298,7 @@ export default function AdminShell() {
             {tab === 'banners' && <div className="p-4 text-sm text-gray-500">Prévisualisation des bannières</div>}
             {tab === 'users' && <div className="p-4 text-sm text-gray-500">Gestion des comptes</div>}
             {tab === 'videos' && <div className="p-4 text-sm text-gray-500">Gestion des vidéos (IDs)</div>}
+            {tab === 'gallery' && <div className="p-4 text-sm text-gray-500">Ajouter/supprimer des photos pour la galerie</div>}
           </div>
         </div>
       </div>
@@ -273,20 +306,3 @@ export default function AdminShell() {
   );
 }
 
-function LoginForm({ onLogin }: { onLogin: (u: string, r: string) => void }) {
-  const [username, setUsername] = useState('admin');
-  const [role, setRole] = useState('admin');
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onLogin(username, role); }}>
-      <label className="block text-sm mb-1">Nom d'utilisateur</label>
-      <input className="w-full mb-2 p-2 rounded" value={username} onChange={(e) => setUsername(e.target.value)} />
-      <label className="block text-sm mb-1">Rôle</label>
-      <select className="w-full mb-4 p-2 rounded" value={role} onChange={(e) => setRole(e.target.value)}>
-        <option value="writer">Rédacteur</option>
-        <option value="editor">Éditeur</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button className="w-full bg-blue-600 text-white py-2 rounded">Se connecter</button>
-    </form>
-  );
-}

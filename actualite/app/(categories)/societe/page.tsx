@@ -1,8 +1,25 @@
 import ArticleCard from '../../components/ArticleCard';
-import mockArticles from '../../data/mockArticles';
+import prisma from '../../../../lib/prismaClient';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default function SocietePage() {
-  const societeArticles = mockArticles.filter(article => article.category === 'Société');
+export default async function SocietePage() {
+  let societeArticles: any[] = [];
+  try {
+    const fromDb = await prisma.article.findMany({
+      where: { category: 'Société', publishedAt: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    societeArticles = (fromDb || []).map((a: any) => ({
+      id: a.id,
+      title: a.title || a.slug,
+      excerpt: a.excerpt || '',
+      category: a.category || 'Société',
+      date: (a.publishedAt || a.createdAt) ? new Date(a.publishedAt || a.createdAt).toLocaleDateString('fr-FR') : '',
+      image: a.image || '/placeholder.png',
+      slug: a.slug,
+    }));
+  } catch (e) {}
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">

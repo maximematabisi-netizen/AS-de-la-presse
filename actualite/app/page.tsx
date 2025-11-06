@@ -4,25 +4,24 @@ import Link from 'next/link';
 import NewsTicker from './components/NewsTicker';
 import VideosSection from './components/VideosSection';
 import FeaturedHero from './components/FeaturedHero';
+import AgentsGallery from './components/AgentsGallery';
 import MostReadSlider from './components/MostReadSlider';
 import prisma from '../../lib/prismaClient';
 
 export default async function Home() {
-  // Try to load articles from Prisma (server). Fallback to mockArticles for dev/offline.
-  let articles = mockArticles as any[];
+  // Charger la BD; en production ne JAMAIS retomber sur les mocks
+  let articles: any[] = [];
   try {
     const fromDb = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
-    console.log('Fetched articles from database:', fromDb);
     if (fromDb && fromDb.length > 0) {
-      articles = fromDb.filter((article: any) => article.publishedAt !== null) as any[]; // Ensure only published articles are included
-      console.log('Filtered published articles:', articles);
-
-      // Vérifier les articles supprimés
-      const deletedArticles = fromDb.filter((article: any) => article.deletedAt !== null);
-      console.log('Deleted articles (should not appear):', deletedArticles);
+      articles = fromDb.filter((article: any) => article.publishedAt !== null) as any[];
     }
   } catch (e) {
     console.error('Error fetching articles from database:', e);
+  }
+  // En dev hors prod, permettre le fallback mock pour travailler sans BD
+  if (process.env.NODE_ENV !== 'production' && (!articles || articles.length === 0)) {
+    articles = mockArticles as any[];
   }
 
   console.log('All articles:', articles);
@@ -40,8 +39,8 @@ export default async function Home() {
       {/* News ticker */}
       <NewsTicker />
 
-  {/* Featured hero */}
-  <FeaturedHero />
+  {/* Featured hero, alimenté par la BD */}
+  <FeaturedHero articles={featuredArticles} />
 
   {/* Most read slider */}
   <MostReadSlider />
@@ -134,6 +133,9 @@ export default async function Home() {
           </div>
         </section>
       </div>
+
+      {/* Agents gallery */}
+      <AgentsGallery />
       {/* Videos section (YouTube) */}
       <VideosSection />
     </main>

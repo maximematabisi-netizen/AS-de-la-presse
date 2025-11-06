@@ -1,9 +1,33 @@
+"use client";
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import mockArticles from '../data/mockArticles';
 
-const FeaturedHero = () => {
-  const featured = mockArticles.find((a) => a.isFeatured) || mockArticles[0];
+type FeaturedHeroProps = { articles?: any[] };
 
+const FeaturedHero = ({ articles: articlesProp }: FeaturedHeroProps) => {
+  const [articles, setArticles] = useState<any[]>(articlesProp && articlesProp.length > 0
+    ? articlesProp
+    : (process.env.NODE_ENV === 'production' ? [] : mockArticles));
+  useEffect(() => {
+    if (articlesProp && articlesProp.length > 0) {
+      setArticles(articlesProp);
+      return;
+    }
+    if (process.env.NODE_ENV === 'production') {
+      (async () => {
+        try {
+          const r = await fetch('/api/articles');
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data)) setArticles(data);
+          }
+        } catch (e) {}
+      })();
+    }
+  }, [articlesProp]);
+
+  const featured = (articles.find((a) => a.isFeatured) || articles[0]);
   if (!featured) return null;
 
   return (

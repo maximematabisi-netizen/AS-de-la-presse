@@ -1,21 +1,16 @@
 // Lightweight wrapper that tries to import PrismaClient if available, otherwise provides a mock
-let prisma: any = null;
-try {
-  const { PrismaClient } = require('@prisma/client');
-  prisma = new PrismaClient();
-} catch (e) {
-  // No prisma installed — provide a minimal mock with same method names used later
-  prisma = {
-    article: {
-      findMany: async () => [],
-      findUnique: async () => null,
-      create: async (data: any) => data,
-      update: async (args: any) => args,
-    },
-    user: {
-      findUnique: async () => null,
-    },
-  };
-}
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export default prisma;

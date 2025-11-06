@@ -1,5 +1,6 @@
 import prisma from '../../../../lib/prismaClient';
 import Image from 'next/image';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ViewsIncrementer from './ViewsIncrementer.client';
 
@@ -60,12 +61,25 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             ))}
           </ul>
           <div className="flex gap-3">
-            <a href="/actualite/admin" className="px-4 py-2 bg-blue-600 text-white rounded">Aller à l'admin</a>
-            <a href="/actualite/api/debug/articles" className="px-4 py-2 border rounded">Voir endpoint debug</a>
+            <a href="/actualite" className="px-4 py-2 bg-blue-600 text-white rounded">Retour à l’accueil</a>
           </div>
         </div>
       </div>
     );
+  }
+
+  // Fetch related articles in the same category (excluding current)
+  let related: any[] = [];
+  try {
+    if (article?.category) {
+      related = await prisma.article.findMany({
+        where: { category: article.category as any, slug: { not: article.slug } as any },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+      });
+    }
+  } catch (e) {
+    // ignore
   }
 
   return (
@@ -86,14 +100,71 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
       <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="prose prose-lg max-w-none">
-          {article.highlightedQuote && (
-            <blockquote className="border-l-4 border-blue-600 pl-4 italic text-gray-700 my-6">{article.highlightedQuote}</blockquote>
-          )}
           <div className="text-gray-800 space-y-6">
-            {(article.content || '').split('\n').map((p, i) => p.trim() ? <p key={i}>{p.trim()}</p> : null)}
+            {(article.content || '').split('\n').map((raw, i) => {
+              const line = raw.trim();
+              if (!line) return null;
+
+              // Support quoted segments anywhere in the line: "...", “...”, « ... »
+              const patterns: [RegExp, (m: RegExpMatchArray) => string][] = [
+                [/"([^\"]+)"/, (m) => m[1]],
+                [/“([^”]+)”/, (m) => m[1]],
+                [/«\s*([^»]+)\s*»/, (m) => m[1]],
+              ];
+
+              // Try to find the first quoted segment in the line
+              let matchText: string | null = null;
+              let before = '';
+              let after = '';
+              for (const [re, extractor] of patterns) {
+                const m = line.match(re);
+                if (m) {
+                  matchText = extractor(m);
+                  before = line.slice(0, m.index || 0).trim();
+                  after = line.slice((m.index || 0) + m[0].length).trim();
+                  break;
+                }
+              }
+
+              if (matchText) {
+                return (
+                  <div key={`seg-${i}`} className="space-y-4">
+                    {before ? <p>{before}</p> : null}
+                    <blockquote className="border-l-4 border-blue-600 pl-4 italic text-blue-800 my-4 flex items-start">
+                      <span className="mr-2 text-blue-600" aria-hidden="true">❝</span>
+                      <span>{matchText}</span>
+                    </blockquote>
+                    {after ? <p>{after}</p> : null}
+                  </div>
+                );
+              }
+
+              return <p key={`p-${i}`}>{line}</p>;
+            })}
           </div>
         </div>
       </article>
+      {related && related.length > 0 && (
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Dans la même catégorie</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {related.map((r) => (
+              <Link key={r.id} href={`/actualite/article/${r.slug}`} className="group">
+                <div className="bg-white rounded-lg shadow hover:shadow-md transition p-4">
+                  {r.image ? (
+                    <div className="h-40 w-full overflow-hidden rounded-md mb-3">
+                      <img src={r.image} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    </div>
+                  ) : null}
+                  <div className="text-sm text-blue-600 mb-1">{r.category}</div>
+                  <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{r.title}</h3>
+                  {r.excerpt ? <p className="text-sm text-gray-600 mt-1 line-clamp-2">{r.excerpt}</p> : null}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
       {/* increment views client-side */}
       <ViewsIncrementer slug={article.slug} />
     </div>
