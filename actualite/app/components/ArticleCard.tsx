@@ -43,6 +43,10 @@ const ArticleCard = ({ title, excerpt, category, date, image, slug, isLive, publ
     return () => clearInterval(id);
   }, [publishedAt]);
 
+  useEffect(() => {
+    setImgSrc(image || '/images/video-placeholder.png');
+  }, [image]);
+
   const handleImageError = () => {
     setImgSrc('/images/video-placeholder.png');
   };
