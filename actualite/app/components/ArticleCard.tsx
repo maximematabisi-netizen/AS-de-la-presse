@@ -24,11 +24,13 @@ const CategoryColors: { [key: string]: string } = {
   'Culture': 'bg-purple-100 text-purple-600',
   'Société': 'bg-orange-100 text-orange-600',
   'Femme': 'bg-pink-100 text-pink-600',
+  'Sécurité': 'bg-yellow-100 text-yellow-600',
 };
 
 const ArticleCard = ({ title, excerpt, category, date, image, slug, isLive, publishedAt, views, shares }: ArticleCardProps) => {
   const categoryColor = CategoryColors[category] || 'bg-gray-100 text-gray-600';
   const [minutesAgo, setMinutesAgo] = useState<string | null>(null);
+  const [imgSrc, setImgSrc] = useState(image || '/images/video-placeholder.png');
 
   useEffect(() => {
     if (!publishedAt) return;
@@ -41,13 +43,18 @@ const ArticleCard = ({ title, excerpt, category, date, image, slug, isLive, publ
     return () => clearInterval(id);
   }, [publishedAt]);
 
+  const handleImageError = () => {
+    setImgSrc('/images/video-placeholder.png');
+  };
+
   return (
     <Link href={`/actualite/article/${slug}`}>
       <article className="bg-white rounded-xl shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg group h-full flex flex-col">
         <div className="relative h-56 overflow-hidden">
           <img
-            src={image}
+            src={imgSrc}
             alt={title}
+            onError={handleImageError}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
