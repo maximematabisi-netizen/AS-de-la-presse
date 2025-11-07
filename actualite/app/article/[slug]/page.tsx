@@ -40,6 +40,32 @@ export default async function ArticlePage({ params }: { params: { slug: string }
   }
 
   if (!article) {
+    // Attempt to recover from malformed slugs that contain extra text or formatting
+    // e.g. someone pasted: "Voici un slug approprié : `kwango-...`" into the URL.
+    try {
+      const raw = String(slug || '');
+      // decode and strip surrounding punctuation/backticks
+      const decoded = decodeURIComponent(raw).replace(/["'‘’“”`]/g, '').trim();
+      // If there's a backtick-enclosed token originally, try to extract it
+      const bt = raw.match(/`([a-z0-9-]+)`/i);
+      let candidate = bt ? bt[1] : null;
+      if (!candidate) {
+        // otherwise try to find the last token that looks like a slug
+        const tokens = decoded.split(/\s+/).reverse();
+        for (const t of tokens) {
+          if (/^[a-z0-9-]{6,}$/.test(t)) {
+            candidate = t.toLowerCase();
+            break;
+          }
+        }
+      }
+      if (candidate) {
+        const maybe = await prisma.article.findUnique({ where: { slug: candidate } as any });
+        if (maybe) article = maybe as any;
+      }
+    } catch (e) {
+      // ignore
+    }
     // Instead of an opaque 404, show available slugs to help debug why the article isn't found
     let available: { id: number; slug: string; title: string }[] = [];
     try {

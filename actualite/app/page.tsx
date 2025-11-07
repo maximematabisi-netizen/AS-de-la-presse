@@ -22,6 +22,7 @@ export default async function Home() {
         { publishedAt: 'desc' },
         { createdAt: 'desc' },
       ],
+      take: 100, // retrieve up to 100 articles for the homepage
     });
     
     if (fromDb && fromDb.length > 0) {
