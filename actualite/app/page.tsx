@@ -6,6 +6,7 @@ import VideosSection from './components/VideosSection';
 import FeaturedHero from './components/FeaturedHero';
 import AgentsGallery from './components/AgentsGallery';
 import MostReadSlider from './components/MostReadSlider';
+import AutoRefreshArticles from './components/AutoRefreshArticles.client';
 import prisma from '../../lib/prismaClient';
 
 export const revalidate = 0; // Force le rechargement à chaque requête
@@ -71,6 +72,8 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-white">
+      {/* client helper: polls API and reloads homepage when new published articles appear */}
+      <AutoRefreshArticles initialPublishedAt={featuredArticles[0]?.publishedAt ? new Date(featuredArticles[0].publishedAt).toISOString() : null} />
   {/* LogoBar moved to root layout so it's visible site-wide */}
       {/* News ticker */}
       <NewsTicker />
