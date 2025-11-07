@@ -270,13 +270,24 @@ export default function AdminShell() {
 
   const remove = async (slug: string) => {
     try {
+      // If article is only local (not synced), remove it locally and from localStorage only
+      const found = articles.find(a => a.slug === slug);
+      if (found && (found.synced === false || found.synced === undefined)) {
+        const newList = articles.filter(a => a.slug !== slug);
+        setArticles(newList);
+        try { localStorage.setItem('admin:articles', JSON.stringify(newList)); } catch (e) {}
+        alert('Article local supprimé.');
+        return;
+      }
+
       const res = await fetch(`/api/articles?slug=${encodeURIComponent(slug)}`, {
         method: 'DELETE',
       });
       if (res.ok) {
         // Retirer l'article de la liste locale immédiatement
         setArticles(prev => prev.filter(a => a.slug !== slug));
-        
+        try { localStorage.setItem('admin:articles', JSON.stringify(articles.filter(a => a.slug !== slug))); } catch (e) {}
+
         // Rafraîchir la liste complète depuis le serveur après un court délai
         setTimeout(async () => {
           try {
