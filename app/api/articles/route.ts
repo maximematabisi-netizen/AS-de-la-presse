@@ -5,6 +5,10 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL is missing in environment');
+      return NextResponse.json({ error: 'DATABASE_URL manquant. Configurez la variable d\'environnement DATABASE_URL.' }, { status: 500 });
+    }
     // Read the request body once. Logging the body consumed the stream previously,
     // causing subsequent reads to return empty and making server-side saves fail.
     const body = await req.json();
@@ -86,7 +90,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(created);
   } catch (e) {
     console.error('Error in POST /api/articles:', e);
-    return NextResponse.json({ error: 'failed' }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    // return a helpful message for debugging (non-sensitive)
+    return NextResponse.json({ error: msg || 'failed' }, { status: 500 });
   }
 }
 
