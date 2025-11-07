@@ -284,9 +284,10 @@ export default function AdminShell() {
         method: 'DELETE',
       });
       if (res.ok) {
-        // Retirer l'article de la liste locale immédiatement
-        setArticles(prev => prev.filter(a => a.slug !== slug));
-        try { localStorage.setItem('admin:articles', JSON.stringify(articles.filter(a => a.slug !== slug))); } catch (e) {}
+        // Retirer l'article de la liste locale immédiatement (use a computed new list to avoid stale state)
+        const newList = articles.filter(a => a.slug !== slug);
+        setArticles(newList);
+        try { localStorage.setItem('admin:articles', JSON.stringify(newList)); } catch (e) {}
 
         // Rafraîchir la liste complète depuis le serveur après un court délai
         setTimeout(async () => {

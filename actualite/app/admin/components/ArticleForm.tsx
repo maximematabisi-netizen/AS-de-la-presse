@@ -26,7 +26,21 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !slug) return alert('Titre et slug requis');
+    if (!title) return alert('Titre requis');
+    // Generate a safe slug from title if slug is empty
+    const slugify = (s: string) => {
+      if (!s) return '';
+      return s
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    };
+    const finalSlug = slug && slug.trim() ? slug.trim() : slugify(title);
     let image = imagePreview || imageUrl || '';
 
     // If we have a data URL (uploaded file), try to POST it to server upload endpoint
@@ -48,7 +62,7 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
       console.warn('upload failed', e);
     }
 
-  onSave({ title, slug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image, authorName: authorName || null });
+  onSave({ title, slug: finalSlug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image, authorName: authorName || null });
     if (!initial) {
       setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setPublishAt(''); setImageUrl(''); setImagePreview(null);
       setIsBreaking(false);
