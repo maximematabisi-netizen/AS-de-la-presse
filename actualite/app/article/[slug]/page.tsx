@@ -149,7 +149,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="relative h-[60vh] min-h-[300px] bg-gray-900">
+      <div className="relative h-[45vh] sm:h-[55vh] md:h-[60vh] min-h-[280px] bg-gray-900">
         {article.image && (
           // plain img ensures any remote URL (Vercel Blob, external hosts) renders without Next's image domain whitelist
           <img src={article.image} alt={article.title} className="object-cover w-full h-full opacity-60" />
@@ -158,14 +158,14 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         <div className="absolute bottom-0 w-full py-8">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-4`}>{article.category}</span>
-            <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-4">{article.title}</h1>
-            <p className="text-lg text-blue-100">{article.excerpt}</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-3">{article.title}</h1>
+            <p className="text-base sm:text-lg text-blue-100">{article.excerpt}</p>
           </div>
         </div>
       </div>
 
-      <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="prose prose-lg max-w-none">
+      <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="prose lg:prose-lg max-w-none">
           <div className="text-gray-800 space-y-6">
             {(article.content || '').split('\n').map((raw, i) => {
               const line = raw.trim();
@@ -226,7 +226,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
       </article>
       {/* Author / publisher */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="text-right text-sm text-gray-700 font-semibold">Publié par <span className="font-bold">{article.authorName || 'Rédaction'}</span></div>
+        <div className="text-center sm:text-right text-sm text-gray-700 font-semibold">Publié par <span className="font-bold">{article.authorName || 'Rédaction'}</span></div>
       </div>
       {related && related.length > 0 && (
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">

@@ -138,9 +138,9 @@ const Footer = () => {
             <div>
               <h3 className="text-lg font-semibold mb-2">Contact</h3>
               <address className="not-italic text-gray-400 text-sm">
-                Email: <a href="mailto:contact@actualite.cd" className="hover:text-white">contact@actualite.cd</a><br />
+                Email: <a href="mailto:contact@lesasdelapresse.cd" className="hover:text-white">contact@lesasdelapresse.cd</a><br />
                 ACTUALITE.CD – Next Corp. 32 A, Avenue Tombalbaye, Kinshasa/Gombe<br />
-                Tél: +243999136373
+                Tél: +243820282857
               </address>
             </div>
 
