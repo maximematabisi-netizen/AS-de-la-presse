@@ -26,12 +26,43 @@ export default async function ArticlePage({ params }: { params: { slug: string }
   // fetch article server-side for reliable rendering
   let article: Article | null = null;
   try {
-    article = await prisma.article.findUnique({ where: { slug } as any });
+    // Normalize helpers: use same slugify used elsewhere so matching is consistent
+    const slugify = (s: string) => {
+      return String(s || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    };
+
+    const rawParam = String(params.slug || '');
+    const decodedParam = decodeURIComponent(rawParam).replace(/[`"'‘’“”]/g, '').trim();
+    const normalizedParam = slugify(decodedParam);
+
+    // Try exact match first (covers already-correct slugs)
+    article = await prisma.article.findUnique({ where: { slug: decodedParam } as any });
+    // Try normalized slug match (covers spaces/accents vs hyphenated slugs)
+    if (!article && normalizedParam) {
+      article = await prisma.article.findUnique({ where: { slug: normalizedParam } as any });
+    }
+    // If not found yet, try scanning server-side records and compare normalized forms
     if (!article) {
-      // fallback: case-insensitive search
-      const candidates = await prisma.article.findMany();
-      const lower = String(slug).toLowerCase();
-      const found = candidates.find((a: any) => (a.slug || '').toLowerCase() === lower);
+      const candidates = await prisma.article.findMany({ select: { id: true, slug: true, title: true, content: true, category: true, image: true, excerpt: true, publishedAt: true, createdAt: true, highlightedQuote: true, views: true, shares: true } });
+      const lower = String(decodedParam).toLowerCase();
+      // Try exact case-insensitive match on stored slug
+      let found = candidates.find((a: any) => (a.slug || '').toLowerCase() === lower);
+      if (!found && normalizedParam) {
+        // Try normalized comparison between stored slug/title and incoming
+        found = candidates.find((a: any) => {
+          const stored = String(a.slug || '');
+          const normStored = slugify(stored);
+          const normTitle = slugify(String(a.title || ''));
+          return normStored === normalizedParam || normTitle === normalizedParam;
+        });
+      }
       if (found) article = found as any;
     }
   } catch (e) {
