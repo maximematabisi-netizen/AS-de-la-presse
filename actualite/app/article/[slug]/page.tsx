@@ -46,8 +46,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
       const raw = String(slug || '');
       // decode and strip surrounding punctuation/backticks
       const decoded = decodeURIComponent(raw).replace(/["'‘’“”`]/g, '').trim();
-      // If there's a backtick-enclosed token originally, try to extract it
-      const bt = raw.match(/`([a-z0-9-]+)`/i);
+      // If there's a backtick-enclosed token originally, try to extract it from the decoded value
+      const bt = decoded.match(/`([a-z0-9-]+)`/i);
       let candidate = bt ? bt[1] : null;
       if (!candidate) {
         // otherwise try to find the last token that looks like a slug
@@ -57,6 +57,14 @@ export default async function ArticlePage({ params }: { params: { slug: string }
             candidate = t.toLowerCase();
             break;
           }
+        }
+      }
+      // If still no candidate, handle patterns like "Voici un slug approprié : kwango-..."
+      if (!candidate) {
+        const colon = decoded.split(':').pop()?.trim();
+        if (colon) {
+          const maybeToken = colon.split(/\s+/).find(tok => /^[a-z0-9-]{6,}$/.test(tok));
+          if (maybeToken) candidate = maybeToken.toLowerCase();
         }
       }
       if (candidate) {
