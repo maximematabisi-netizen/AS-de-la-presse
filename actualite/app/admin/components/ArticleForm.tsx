@@ -62,7 +62,7 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
       console.warn('upload failed', e);
     }
 
-  onSave({ title, slug: finalSlug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image, authorName: authorName || null });
+  onSave({ id: initial?.id, title, slug: finalSlug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image, authorName: authorName || null });
     if (!initial) {
       setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setPublishAt(''); setImageUrl(''); setImagePreview(null);
       setIsBreaking(false);

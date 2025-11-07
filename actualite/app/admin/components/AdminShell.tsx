@@ -138,6 +138,22 @@ export default function AdminShell() {
     (async () => {
       setSavingStatus('saving');
       try {
+        // ensure slug uniqueness among current admin list to avoid accidental
+        // overwrites when two different articles end up with the same slug.
+        const makeUniqueSlug = (candidate: string | undefined) => {
+          const base = String(candidate || '').trim();
+          if (!base) return base;
+          const conflict = articles.find(p => String(p.slug) === base);
+          if (!conflict) return base;
+          // If we're editing the same article (id matches), keep it
+          if (article.id && conflict.id && String(conflict.id) === String(article.id)) return base;
+          // otherwise append a timestamp to ensure uniqueness
+          return `${base}-${Math.floor(Date.now() / 1000)}`;
+        };
+
+        // apply unique slug logic before sanitizing
+        article.slug = makeUniqueSlug(article.slug);
+
         // sanitize payload: only send primitive/string fields the server expects
         const sanitize = (a: any) => ({
           title: a.title,
