@@ -57,10 +57,6 @@ const Footer = () => {
           {/* Column 1: Branding & description (left aligned) */}
           <div className="space-y-3">
               <a href="/actualite" className="inline-flex items-center gap-3 mb-1">
-              <img src="/images/LOGO.png" alt="Les As de la presse" className="h-28 md:h-36 w-auto logo-animate" onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (!img.dataset.fallback) { img.dataset.fallback = '1'; img.src = '/images/logo.svg'; } else { img.style.display = 'none'; }
-              }} />
               <span className="text-4xl md:text-6xl font-bold">Les As de la presse</span>
             </a>
             <p className="text-gray-400 text-sm">Votre source d'information en République Démocratique du Congo. Journalisme indépendant, enquêtes et analyses.</p>
