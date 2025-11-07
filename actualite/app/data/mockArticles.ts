@@ -23,7 +23,12 @@ export interface Article {
   videoUrl?: string | null;
 }
 
-const mockArticles: Article[] = [
+const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+// In production we don't want demo/mock articles to appear — return an empty array.
+const mockArticles: Article[] = isProd
+  ? []
+  : [
   {
     id: 1,
     title: "RDC : Le gouvernement lance un nouveau programme de développement",
@@ -134,6 +139,6 @@ const mockArticles: Article[] = [
     isFeatured: false,
     videoUrl: null
   }
-];
+  ];
 
 export default mockArticles;
