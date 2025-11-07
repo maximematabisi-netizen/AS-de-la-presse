@@ -126,10 +126,25 @@ export default function AdminShell() {
     (async () => {
       setSavingStatus('saving');
       try {
+        // sanitize payload: only send primitive/string fields the server expects
+        const sanitize = (a: any) => ({
+          title: a.title,
+          slug: a.slug,
+          excerpt: a.excerpt,
+          content: a.content,
+          category: a.category,
+          publishedAt: a.publishedAt || null,
+          // only send image if it's a string (URL or path)
+          image: typeof a.image === 'string' ? a.image : null,
+          highlightedQuote: a.highlightedQuote || null,
+          authorName: a.authorName || null,
+          isBreaking: !!a.isBreaking,
+        });
+
         const r = await fetch('/api/articles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(article),
+          body: JSON.stringify(sanitize(article)),
         });
         if (r.ok) {
           const created = await r.json();
@@ -191,12 +206,25 @@ export default function AdminShell() {
     setSavingStatus('saving');
     const unsynced = articles.filter(a => a.synced === false || a.synced === undefined);
     try {
-      for (const art of unsynced) {
+        for (const art of unsynced) {
         try {
+          const sanitize = (a: any) => ({
+            title: a.title,
+            slug: a.slug,
+            excerpt: a.excerpt,
+            content: a.content,
+            category: a.category,
+            publishedAt: a.publishedAt || null,
+            image: typeof a.image === 'string' ? a.image : null,
+            highlightedQuote: a.highlightedQuote || null,
+            authorName: a.authorName || null,
+            isBreaking: !!a.isBreaking,
+          });
+
           const r = await fetch('/api/articles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(art),
+            body: JSON.stringify(sanitize(art)),
           });
           if (r.ok) {
             const created = await r.json();
@@ -272,17 +300,30 @@ export default function AdminShell() {
       if (failedItems.length > 0) {
         // attempt individual upserts via /api/articles for failing items
         const fallbackResults: any[] = [];
-        for (const fi of failedItems) {
+          for (const fi of failedItems) {
           const orig = arr.find((a: any) => {
             const slug = (a && a.slug) || '';
             return String(slug) === String(fi.slug);
           }) || null;
           if (!orig) { fallbackResults.push({ slug: fi.slug, ok: false, error: 'original payload not found' }); continue; }
           try {
+            const sanitize = (a: any) => ({
+              title: a.title,
+              slug: a.slug,
+              excerpt: a.excerpt,
+              content: a.content,
+              category: a.category,
+              publishedAt: a.publishedAt || null,
+              image: typeof a.image === 'string' ? a.image : null,
+              highlightedQuote: a.highlightedQuote || null,
+              authorName: a.authorName || null,
+              isBreaking: !!a.isBreaking,
+            });
+
             const r2 = await fetch('/api/articles', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(orig),
+              body: JSON.stringify(sanitize(orig)),
             });
             if (r2.ok) {
               const created = await r2.json();
