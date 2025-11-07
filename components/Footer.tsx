@@ -61,17 +61,17 @@ const Footer = () => {
             </a>
             <p className="text-gray-400 text-sm">Votre source d'information en République Démocratique du Congo. Journalisme indépendant, enquêtes et analyses.</p>
             <div className="mt-4 flex items-center gap-3">
-              <a href="https://web.facebook.com/profile.php?id=61577858264984" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-gray-400 hover:text-white">
+              <a href="https://web.facebook.com/profile.php?id=61577858264984" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="social-icon social-icon-facebook social-icon-animate text-gray-400 hover:text-white">
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
                 </svg>
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-gray-400 hover:text-white">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="social-icon social-icon-twitter social-icon-animate text-gray-400 hover:text-white">
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
                 </svg>
               </a>
-              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-gray-400 hover:text-white">
+              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="social-icon social-icon-youtube social-icon-animate text-gray-400 hover:text-white">
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path d="M23.498 6.186a2.999 2.999 0 00-2.117-2.117C19.73 3.5 12 3.5 12 3.5s-7.73 0-9.381.569A2.999 2.999 0 00.5 6.186 31.78 31.78 0 000 12a31.78 31.78 0 00.5 5.814 2.999 2.999 0 002.119 2.117C4.27 20.5 12 20.5 12 20.5s7.73 0 9.381-.569a2.999 2.999 0 002.117-2.117A31.78 31.78 0 0024 12a31.78 31.78 0 00-.502-5.814zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" />
                 </svg>

@@ -187,3 +187,14 @@ html {
   transform: scale(1.25) translateY(-8px) rotate(-6deg);
   color: #ff0000;
 }
+
+/* Subtle continuous float for social icons when enabled */
+@keyframes socialFloat {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+.social-icon-animate {
+  animation: socialFloat 4s ease-in-out infinite;
+}
