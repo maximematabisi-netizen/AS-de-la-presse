@@ -9,42 +9,73 @@ export async function POST(req: Request) {
         hint: 'Ajoutez DATABASE_URL=postgresql://user:pass@host:port/db et exécutez `npx prisma generate && npx prisma migrate dev`'
       }, { status: 400 });
     }
+
     const body = await req.json();
     if (!Array.isArray(body)) return NextResponse.json({ error: 'expected array' }, { status: 400 });
 
     const results: any[] = [];
-    for (const item of body) {
-      if (!item || !item.slug) continue;
-      const rawSlug = String(item.slug);
-      // normalize slug similarly to server-side creation
-      const slugify = (s: string) => {
-        if (!s) return '';
-        return s
-          .toString()
-          .trim()
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-');
-      };
-      const slug = slugify(decodeURIComponent(rawSlug));
+    // helper slugify - keep consistent with server creation
+    const slugify = (s: string) => {
+      if (!s) return '';
+      return s
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    };
 
-      // If the item is marked deleted on the client, delete it server-side
-      if ((item as any).deleted) {
+    for (const item of body) {
+      if (!item) continue;
+
+      // Generate or normalize a slug. If missing, derive from title or fallback to a timestamped slug
+      const rawSlug = item.slug ? String(item.slug) : null;
+      const base = rawSlug ? decodeURIComponent(rawSlug) : (item.title ? String(item.title) : `untitled-${Date.now()}`);
+      const slug = slugify(base || `untitled-${Date.now()}`);
+
+      // If the item is marked deleted on the client, try to remove it server-side
+      if (item.deleted) {
         try {
-          await prisma.article.delete({ where: { slug } });
-          results.push({ slug, ok: true, deleted: true });
+          // prefer id if present
+          if (item.id) {
+            const idNum = typeof item.id === 'string' ? Number(item.id) : item.id;
+            const found = await prisma.article.findUnique({ where: { id: idNum } as any });
+            if (found) {
+              await prisma.article.delete({ where: { id: found.id } });
+              results.push({ slug, ok: true, deleted: true });
+              continue;
+            }
+          }
+
+          // otherwise try delete by slug
+          const foundBySlug = await prisma.article.findUnique({ where: { slug } as any });
+          if (foundBySlug) {
+            await prisma.article.delete({ where: { id: foundBySlug.id } });
+            results.push({ slug, ok: true, deleted: true });
+          } else {
+            results.push({ slug, ok: false, error: 'not found' });
+          }
         } catch (e) {
-          // If deletion failed (not found etc.), push error but continue
           results.push({ slug, ok: false, error: e instanceof Error ? e.message : String(e) });
         }
         continue;
       }
 
+      // Prepare data to upsert. Be careful with publishedAt parsing.
+      let publishedAt: Date | null = null;
+      if (item.publishedAt) {
+        const d = new Date(item.publishedAt);
+        if (!isNaN(d.getTime())) publishedAt = d;
+      } else if (item.published === true) {
+        // support boolean 'published' flag
+        publishedAt = new Date();
+      }
+
       const data: any = {
-        title: item.title || item.slug,
+        title: item.title || (item.slug ? String(item.slug) : 'Untitled'),
         slug,
         excerpt: item.excerpt || '',
         content: item.content || '',
@@ -52,15 +83,16 @@ export async function POST(req: Request) {
         image: item.image || null,
         highlightedQuote: item.highlightedQuote || null,
         isBreaking: !!item.isBreaking,
-        publishedAt: item.publishedAt ? new Date(item.publishedAt) : new Date(),
+        publishedAt: publishedAt,
         synced: true,
         syncedAt: new Date(),
         authorName: item.authorName || null,
       };
 
       try {
+        // Use upsert by slug; if slug collides unexpectedly this will update the existing entry
         const up = await prisma.article.upsert({
-          where: { slug },
+          where: { slug } as any,
           update: data,
           create: data,
         });
