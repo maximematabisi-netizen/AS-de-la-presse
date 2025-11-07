@@ -117,13 +117,41 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const url = req.nextUrl;
-    const slug = url.searchParams.get('slug');
-    if (!slug) {
-      return NextResponse.json({ error: 'slug is required' }, { status: 400 });
+    const raw = url.searchParams.get('slug') || url.searchParams.get('id');
+    if (!raw) return NextResponse.json({ error: 'slug or id is required' }, { status: 400 });
+
+    // normalize and try to find the article first
+    const slugify = (s: string) => String(s || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+
+    const decoded = decodeURIComponent(raw as string).replace(/[`"'‘’“”]/g, '').trim();
+    const normalized = slugify(decoded);
+
+    // try lookup by slug exact, normalized, or by id
+    let article: any = null;
+    if (/^[0-9]+$/.test(decoded)) {
+      article = await prisma.article.findUnique({ where: { id: Number(decoded) } as any });
+    }
+    if (!article) article = await prisma.article.findUnique({ where: { slug: decoded } as any });
+    if (!article && normalized) article = await prisma.article.findUnique({ where: { slug: normalized } as any });
+
+    if (!article) {
+      return NextResponse.json({ error: 'not found' }, { status: 404 });
     }
 
-    const deleted = await prisma.article.delete({ where: { slug } });
-    return NextResponse.json(deleted);
+    try {
+      const deleted = await prisma.article.delete({ where: { id: article.id } });
+      return NextResponse.json({ ok: true, deleted });
+    } catch (e) {
+      console.error('Error deleting article', article?.id, e);
+      return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    }
   } catch (e) {
     console.error('Error in DELETE /api/articles:', e);
     return NextResponse.json({ error: 'failed' }, { status: 500 });

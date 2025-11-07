@@ -297,9 +297,15 @@ export default function AdminShell() {
           }
         }, 300);
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Failed to delete article on server:', res.status, errorData);
-        alert(`Erreur lors de la suppression: ${errorData.error || 'Erreur inconnue'}`);
+        let errorMsg = 'Erreur inconnue';
+        try {
+          const errorData = await res.json();
+          errorMsg = errorData?.error || JSON.stringify(errorData);
+        } catch (e) {
+          try { const text = await res.text(); if (text) errorMsg = text; } catch (_) {}
+        }
+        console.error('Failed to delete article on server:', res.status, errorMsg);
+        alert(`Erreur lors de la suppression: ${errorMsg}`);
       }
     } catch (e) {
       console.error('Error while deleting article:', e);
