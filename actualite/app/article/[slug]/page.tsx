@@ -171,9 +171,23 @@ export default async function ArticlePage({ params }: { params: { slug: string }
               const line = raw.trim();
               if (!line) return null;
 
+              // If the whole line starts with a quote symbol, treat the full line as a quote
+              const startsWithQuote = /^["“«\s]/.test(line);
+              if (startsWithQuote) {
+                // strip outer quoting characters and balanced quotes from ends
+                let q = line.replace(/^\s*["“«]+/, '');
+                q = q.replace(/["”»]+\s*$/, '');
+                return (
+                  <blockquote key={`blk-${i}`} className="border-l-4 border-blue-600 pl-4 italic text-blue-800 my-4 flex items-start">
+                    <span className="mr-2 text-blue-600" aria-hidden="true">❝</span>
+                    <span>{q.trim()}</span>
+                  </blockquote>
+                );
+              }
+
               // Support quoted segments anywhere in the line: "...", “...”, « ... »
               const patterns: [RegExp, (m: RegExpMatchArray) => string][] = [
-                [/"([^\"]+)"/, (m) => m[1]],
+                [/"([^"]+)"/, (m) => m[1]],
                 [/“([^”]+)”/, (m) => m[1]],
                 [/«\s*([^»]+)\s*»/, (m) => m[1]],
               ];
@@ -210,6 +224,10 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           </div>
         </div>
       </article>
+      {/* Author / publisher */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="text-right text-sm text-gray-700 font-semibold">Publié par <span className="font-bold">{article.authorName || 'Rédaction'}</span></div>
+      </div>
       {related && related.length > 0 && (
         <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Dans la même catégorie</h2>

@@ -55,6 +55,7 @@ export async function POST(req: Request) {
         publishedAt: item.publishedAt ? new Date(item.publishedAt) : new Date(),
         synced: true,
         syncedAt: new Date(),
+        authorName: item.authorName || null,
       };
 
       try {

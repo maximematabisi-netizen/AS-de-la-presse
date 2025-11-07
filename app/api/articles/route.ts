@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
       image: imageToStore,
       highlightedQuote: body.highlightedQuote || null, // Include highlightedQuote
+      authorName: body.authorName || null,
     };
     console.log('Saving article with highlightedQuote:', createData.highlightedQuote);
 

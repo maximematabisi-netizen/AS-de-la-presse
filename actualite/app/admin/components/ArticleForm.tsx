@@ -10,6 +10,7 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
   const [category, setCategory] = useState(initial?.category || 'Actualité');
   const [isBreaking, setIsBreaking] = useState<boolean>(initial?.isBreaking || false);
   const [publishAt, setPublishAt] = useState(initial?.publishedAt || '');
+  const [authorName, setAuthorName] = useState(initial?.authorName || '');
   const [imageUrl, setImageUrl] = useState(initial?.image || '');
   const [imagePreview, setImagePreview] = useState<string | null>(initial?.image || null);
 
@@ -47,7 +48,7 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
       console.warn('upload failed', e);
     }
 
-    onSave({ title, slug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image });
+  onSave({ title, slug, excerpt, content, category, isBreaking, publishedAt: publishAt || new Date().toISOString(), image, authorName: authorName || null });
     if (!initial) {
       setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setPublishAt(''); setImageUrl(''); setImagePreview(null);
       setIsBreaking(false);
@@ -67,6 +68,9 @@ export default function ArticleForm({ onSave, initial, onCancel }: { onSave: (a:
       <textarea className="w-full mb-2 p-2 rounded h-36" value={content} onChange={(e) => setContent(e.target.value)} />
       <label className="block text-sm">Catégorie</label>
       <input className="w-full mb-2 p-2 rounded" value={category} onChange={(e) => setCategory(e.target.value)} />
+
+  <label className="block text-sm">Nom du publieur</label>
+  <input className="w-full mb-2 p-2 rounded" value={authorName} onChange={(e) => setAuthorName(e.target.value)} placeholder="Nom de la personne qui publie (optionnel)" />
 
       <div className="mb-3">
         <label className="inline-flex items-center gap-2">
