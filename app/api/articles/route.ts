@@ -5,8 +5,10 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('Received POST request with body:', await req.json());
+    // Read the request body once. Logging the body consumed the stream previously,
+    // causing subsequent reads to return empty and making server-side saves fail.
     const body = await req.json();
+    console.log('Received POST request with body:', body);
     const {
       title,
       slug,
