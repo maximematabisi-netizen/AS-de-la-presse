@@ -246,6 +246,7 @@ export default function AdminShell() {
       if (!raw) { alert('Aucun article local à resynchroniser'); return; }
       const arr = JSON.parse(raw || '[]');
       if (!Array.isArray(arr) || arr.length === 0) { alert('Aucun article local à resynchroniser'); return; }
+      // Try bulk resync first and show detailed errors if any
       const r = await fetch('/api/debug/resync-articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -266,6 +267,42 @@ export default function AdminShell() {
         return;
       }
       const j = await r.json();
+      // If the bulk resync reported item-level failures, try per-item POST as a fallback
+      const failedItems = Array.isArray(j.results) ? j.results.filter((it: any) => !it.ok) : [];
+      if (failedItems.length > 0) {
+        // attempt individual upserts via /api/articles for failing items
+        const fallbackResults: any[] = [];
+        for (const fi of failedItems) {
+          const orig = arr.find((a: any) => {
+            const slug = (a && a.slug) || '';
+            return String(slug) === String(fi.slug);
+          }) || null;
+          if (!orig) { fallbackResults.push({ slug: fi.slug, ok: false, error: 'original payload not found' }); continue; }
+          try {
+            const r2 = await fetch('/api/articles', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(orig),
+            });
+            if (r2.ok) {
+              const created = await r2.json();
+              fallbackResults.push({ slug: fi.slug, ok: true, id: created.id });
+            } else {
+              let errMsg = '';
+              try { const je = await r2.json(); errMsg = je?.error || JSON.stringify(je); } catch (_) { errMsg = await r2.text().catch(() => 'unknown'); }
+              fallbackResults.push({ slug: fi.slug, ok: false, error: errMsg });
+            }
+          } catch (e) {
+            fallbackResults.push({ slug: fi.slug, ok: false, error: e instanceof Error ? e.message : String(e) });
+          }
+        }
+        // Merge fallback results into j.results for reporting
+        const mergedResults = j.results.map((rItem: any) => {
+          const fb = fallbackResults.find((f: any) => String(f.slug) === String(rItem.slug));
+          return fb ? { ...rItem, fallback: fb } : rItem;
+        });
+        j.results = mergedResults;
+      }
       if (j && Array.isArray(j.all)) {
         const serverArticles = j.all as any[];
         // Preserve any local-only articles that were not created on the server during resync
@@ -282,9 +319,9 @@ export default function AdminShell() {
         window.dispatchEvent(new CustomEvent('admin:articles:changed', { detail: merged }));
 
         // Prepare a friendly result summary
-        const total = j.results ? j.results.length : 0;
-  const failedItems = Array.isArray(j.results) ? j.results.filter((r: any) => !r.ok) : [];
-  const failed = failedItems.map((r: any) => `${r.slug}${r.error ? `: ${r.error}` : ''}`);
+    const total = j.results ? j.results.length : 0;
+  const failedItemsAfter = Array.isArray(j.results) ? j.results.filter((r: any) => !r.ok) : [];
+  const failed = failedItemsAfter.map((r: any) => `${r.slug}${r.error ? `: ${r.error}` : ''}${r.fallback ? ` (fallback: ${r.fallback.ok ? 'ok' : r.fallback.error})` : ''}`);
   alert('Resync terminé: ' + total + ' articles traités' + (failed.length ? '\nÉchecs:\n' + failed.join('\n') : ''));
       } else {
         alert('Resync terminé (aucun détail)');
