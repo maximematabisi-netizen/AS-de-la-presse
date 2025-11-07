@@ -8,12 +8,10 @@ export default function AutoRefreshArticles({ initialPublishedAt }: { initialPub
     let mounted = true;
     const checkNow = async () => {
       try {
-        const res = await fetch('/api/articles', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) return;
-        const first = data[0];
-        const firstPub = first?.publishedAt ? new Date(first.publishedAt).toISOString() : null;
+  const res = await fetch('/api/debug/latest-published', { cache: 'no-store' });
+  if (!res.ok) return;
+  const j = await res.json();
+  const firstPub = j?.latestPublishedAt || null;
         // if initial is missing (no articles before) and now we have one, reload
         if (!initialRef.current && firstPub) {
           if (mounted) window.location.reload();

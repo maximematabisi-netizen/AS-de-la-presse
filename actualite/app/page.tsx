@@ -10,21 +10,40 @@ import AutoRefreshArticles from './components/AutoRefreshArticles.client';
 import prisma from '../../lib/prismaClient';
 
 export const revalidate = 0; // Force le rechargement à chaque requête
+export const dynamic = 'force-dynamic';
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams?: { [key: string]: string | string[] } }) {
   // Charger la BD; en production ne JAMAIS retomber sur les mocks
   let articles: any[] = [];
   try {
     // Filtrer directement dans Prisma pour ne récupérer que les articles publiés
     // Trier par date de publication (plus récent en premier), puis par date de création
-    const fromDb = await prisma.article.findMany({
+    // Allow configuring the homepage article limit via env var HOMEPAGE_ARTICLE_LIMIT.
+    // If not set, default to 1000 so older articles are preserved on the homepage.
+    // Support query params: ?all=true to override and load all articles, or ?limit=NN to set a specific page limit.
+    const limitEnv = process.env.HOMEPAGE_ARTICLE_LIMIT;
+    const defaultLimit = limitEnv ? parseInt(limitEnv, 10) : 1000;
+
+    // Inspect incoming search params (client can request ?all=true or ?limit=NN)
+    const params = searchParams || {};
+  const rawAll = params.all;
+  const wantsAll = rawAll === 'true' || (Array.isArray(rawAll) && rawAll.includes('true'));
+  const limitParam = params.limit ? parseInt(Array.isArray(params.limit) ? params.limit[0] : String(params.limit), 10) : NaN;
+
+    const queryOpts: any = {
       where: { publishedAt: { not: null } },
       orderBy: [
         { publishedAt: 'desc' },
         { createdAt: 'desc' },
       ],
-      take: 100, // retrieve up to 100 articles for the homepage
-    });
+    };
+
+    if (!wantsAll) {
+      const take = !isNaN(limitParam) && limitParam > 0 ? limitParam : defaultLimit;
+      if (!isNaN(take) && take > 0) queryOpts.take = take;
+    }
+
+    const fromDb = await prisma.article.findMany(queryOpts);
     
     if (fromDb && fromDb.length > 0) {
       // Mapper les articles de la BD au format attendu par ArticleCard

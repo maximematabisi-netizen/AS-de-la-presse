@@ -26,6 +26,7 @@ export default function AdminShell() {
   const [selected, setSelected] = useState<any | null>(null);
   const [tab, setTab] = useState<'articles'|'dashboard'|'banners'|'users'|'videos'|'gallery'>('articles');
   const [savingStatus, setSavingStatus] = useState<'idle'|'saving'|'saved-server'|'saved-local'|'error'>('idle');
+  const [homepageLimit, setHomepageLimit] = useState<number | null>(null);
 
   // Vérifier la session au chargement
   useEffect(() => {
@@ -107,6 +108,17 @@ export default function AdminShell() {
         console.log('Admin: loaded and merged server + local articles', deduped.length);
       } catch (e) {
         console.error('Admin: failed to fetch server articles', e);
+      }
+    })();
+    // Fetch homepage limit for admin info banner
+    (async () => {
+      try {
+        const r = await fetch('/api/debug/homepage-limit', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j && typeof j.limit === 'number') setHomepageLimit(j.limit);
+      } catch (e) {
+        // ignore
       }
     })();
   }, [hydrated, user]);
@@ -451,6 +463,20 @@ export default function AdminShell() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      {/* Admin banner: show homepage limit and quick actions */}
+      {homepageLimit !== null && (
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-900 flex items-center justify-between">
+            <div>
+              La page d'accueil affiche actuellement jusqu'à <strong>{homepageLimit}</strong> articles par défaut.
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => window.open('/actualite?all=true', '_blank')} className="px-3 py-1 bg-yellow-100 text-yellow-900 rounded text-sm">Voir la page complète</button>
+              <a target="_blank" rel="noreferrer" href="https://vercel.com/docs/environment-variables" className="px-3 py-1 bg-white text-yellow-900 rounded text-sm">Modifier (Vercel)</a>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Admin</h1>
