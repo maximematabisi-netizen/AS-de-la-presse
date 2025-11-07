@@ -25,6 +25,7 @@ model Article {
   shares     Int     @default(0)
   createdAt  DateTime @default(now())
   highlightedQuote String? // Added field for important quotes
+  authorName  String?
 }
 
 model User {
