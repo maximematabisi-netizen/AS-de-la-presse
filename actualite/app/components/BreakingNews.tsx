@@ -6,8 +6,9 @@ import mockArticles from '../data/mockArticles';
 
 const BreakingNews = () => {
   const [enabled, setEnabled] = useState(true);
-  const [articles, setArticles] = useState<typeof mockArticles>(mockArticles);
+  const [articles, setArticles] = useState<any[]>([]);
   useEffect(() => {
+    let mounted = true;
     const v = localStorage.getItem('breakingEnabled');
     if (v !== null) setEnabled(v === '1');
     const handler = () => {
@@ -15,11 +16,27 @@ const BreakingNews = () => {
       setEnabled(nv !== '0');
     };
     window.addEventListener('storage', handler);
-    // load admin-persisted articles if present
-    try {
-      const raw = localStorage.getItem('admin:articles');
-      if (raw) setArticles(JSON.parse(raw));
-    } catch (e) {}
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/articles');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted && Array.isArray(data) && data.length > 0) {
+            setArticles(data);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore and fallback to admin localStorage below
+      }
+
+      try {
+        const raw = localStorage.getItem('admin:articles');
+        if (raw) setArticles(JSON.parse(raw));
+      } catch (e) {}
+    };
+    load();
 
     // Also listen for admin:articles:changed in the same tab
     const onAdminChange = (ev: Event) => {
@@ -33,7 +50,7 @@ const BreakingNews = () => {
       } catch (e) {}
     };
     window.addEventListener('admin:articles:changed', onAdminChange as EventListener);
-    return () => window.removeEventListener('storage', handler);
+    return () => { window.removeEventListener('storage', handler); window.removeEventListener('admin:articles:changed', onAdminChange as EventListener); mounted = false; };
   }, []);
 
   if (!enabled) return null;

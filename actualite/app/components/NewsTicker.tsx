@@ -36,19 +36,36 @@ const NewsTicker = () => {
     return () => cancelAnimationFrame(animationId);
   }, [running]);
 
-  const [articles, setArticles] = useState<typeof mockArticles>(mockArticles);
+  const [articles, setArticles] = useState<any[]>([]);
 
-  // attempt to hydrate from admin localStorage on client
+  // load published articles from the API (preferred) and keep admin local updates as a fallback
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('admin:articles');
-      if (raw) setArticles(JSON.parse(raw));
-    } catch (e) {}
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/articles');
+        if (!res.ok) throw new Error('failed to fetch');
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setArticles(data);
+          return;
+        }
+      } catch (e) {
+        // ignore fetch errors and fallback to admin localStorage below
+      }
+
+      // fallback: hydrate from admin localStorage on client if API not available or empty
+      try {
+        const raw = localStorage.getItem('admin:articles');
+        if (raw) setArticles(JSON.parse(raw));
+      } catch (e) {}
+    };
+    load();
 
     // listen for admin-driven updates in the same tab
     const handler = (ev: Event) => {
       try {
-        // prefer detail from CustomEvent
         const ce = ev as CustomEvent;
         if (ce?.detail) {
           setArticles(ce.detail as any[]);
@@ -61,7 +78,7 @@ const NewsTicker = () => {
       } catch (e) {}
     };
     window.addEventListener('admin:articles:changed', handler as EventListener);
-    return () => window.removeEventListener('admin:articles:changed', handler as EventListener);
+    return () => { window.removeEventListener('admin:articles:changed', handler as EventListener); mounted = false; };
   }, []);
 
   const items = articles.map((a) => ({
