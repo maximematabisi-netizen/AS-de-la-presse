@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prismaClient';
+import prisma from '@/lib/prismaClient';
 
 export async function GET() {
   try {
     const videos = await prisma.video.findMany({ orderBy: { createdAt: 'desc' } });
     // Return just the videoId strings for compatibility
-    return NextResponse.json(videos.map(v => v.videoId));
+  return NextResponse.json(videos.map((v: any) => v.videoId));
   } catch (e: any) {
     console.error('Videos GET failed:', e);
     return NextResponse.json({ 

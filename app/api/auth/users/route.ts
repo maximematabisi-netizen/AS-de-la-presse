@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prismaClient';
+import prisma from '@/lib/prismaClient';
 import { jwtVerify } from 'jose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-placeholder';

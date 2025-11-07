@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { prisma } from '@/lib/prismaClient';
+import prisma from '@/lib/prismaClient';
 import * as bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-placeholder';

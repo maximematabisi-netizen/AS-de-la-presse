@@ -1,5 +1,5 @@
 import prisma from '../../../../lib/prismaClient';
-import Image from 'next/image';
+// Use a plain <img> for article header images to avoid Next/Image remote domain restrictions
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ViewsIncrementer from './ViewsIncrementer.client';
@@ -86,7 +86,8 @@ export default async function ArticlePage({ params }: { params: { slug: string }
     <div className="min-h-screen bg-white">
       <div className="relative h-[60vh] min-h-[300px] bg-gray-900">
         {article.image && (
-          <Image src={article.image} alt={article.title} fill className="object-cover opacity-60" sizes="100vw" priority />
+          // plain img ensures any remote URL (Vercel Blob, external hosts) renders without Next's image domain whitelist
+          <img src={article.image} alt={article.title} className="object-cover w-full h-full opacity-60" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent" />
         <div className="absolute bottom-0 w-full py-8">

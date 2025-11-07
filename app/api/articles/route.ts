@@ -5,8 +5,8 @@ const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('Received POST request with body:', await req.json());
     const body = await req.json();
-    console.log('Received POST request with body:', body);
     const {
       title,
       slug,
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       category,
       publishedAt,
       image,
+      highlightedQuote,
     } = body;
 
     if (!title || !slug) {
@@ -44,9 +45,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Vérifier si l'article existe déjà (par slug)
-    const existing = await prisma.article.findUnique({ where: { slug } });
-    
+    console.log('Received highlightedQuote:', body.highlightedQuote);
     const createData: any = {
       title,
       slug,
@@ -55,61 +54,20 @@ export async function POST(req: NextRequest) {
       category: category || 'Actualité',
       publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
       image: imageToStore,
-      synced: true,
-      syncedAt: new Date(),
+      highlightedQuote: body.highlightedQuote || null, // Include highlightedQuote
     };
+    console.log('Saving article with highlightedQuote:', createData.highlightedQuote);
 
-    // Utiliser upsert pour créer ou mettre à jour l'article
-    const created = await prisma.article.upsert({
-      where: { slug },
-      update: createData,
-      create: createData,
-    });
-    
-    console.log('Article created/updated successfully:', {
-      id: created.id,
-      slug: created.slug,
-      title: created.title,
-      publishedAt: created.publishedAt,
-    });
+    // mark as synced since we create it server-side
+    createData.synced = true;
+    createData.syncedAt = new Date();
 
-    // Envoyer les notifications aux abonnés si l'article est publié
-    // Import dynamique pour éviter les erreurs si le module email a un problème
-    if (created.publishedAt) {
-      // Envoyer les emails en arrière-plan (ne pas bloquer la réponse)
-      import('@/lib/email')
-        .then(({ sendNewsletterNotification }) => {
-          return sendNewsletterNotification({
-            title: created.title,
-            excerpt: created.excerpt,
-            category: created.category,
-            image: created.image,
-            slug: created.slug,
-          });
-        })
-        .catch((error) => {
-          // Log l'erreur mais ne pas faire échouer la création d'article
-          console.error('[email] Failed to send newsletter notification:', error);
-        });
-    }
-
+    const created = await prisma.article.create({ data: createData });
+    console.log('Article created successfully:', created);
     return NextResponse.json(created);
-  } catch (e: any) {
+  } catch (e) {
     console.error('Error in POST /api/articles:', e);
-    console.error('Error details:', {
-      message: e?.message,
-      code: e?.code,
-      name: e?.name,
-      stack: e?.stack,
-    });
-    return NextResponse.json({ 
-      error: e?.message || 'failed',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: e?.message,
-        code: e?.code,
-        name: e?.name,
-      } : undefined
-    }, { status: 500 });
+    return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
 }
 
@@ -119,53 +77,18 @@ export async function GET(req: NextRequest) {
     const url = req.nextUrl;
     const slug = url.searchParams.get('slug');
     if (slug) {
-      console.log('Looking up article for slug:', slug);
-      // try exact match first
-      let article: any = null;
-      try {
-        article = await prisma.article.findUnique({ where: { slug } as any });
-      } catch (e) {
-        console.error('findUnique error', e);
-      }
-
+      console.log('Fetching article with slug:', slug);
+      const article = await prisma.article.findUnique({ where: { slug } });
       if (!article) {
-        // fallback: try case-insensitive match by fetching candidates and matching in JS
-        try {
-          const candidates = await prisma.article.findMany();
-          const lower = slug.toLowerCase();
-          article = candidates.find((a: any) => (a.slug || '').toLowerCase() === lower);
-          if (article) console.log('Found article by case-insensitive match for slug:', slug);
-        } catch (e) {
-          console.error('Fallback search failed', e);
-        }
-      }
-
-      if (!article) {
-        console.error('Article not found for slug after fallbacks:', slug);
+        console.error('Article not found for slug:', slug);
         return NextResponse.json({ error: 'not found' }, { status: 404 });
       }
-      console.log('Article retrieved successfully:', { id: article.id, slug: article.slug, title: article.title });
+      console.log('Article retrieved successfully:', article);
       return NextResponse.json(article);
     }
-    try {
-      // Récupérer TOUS les articles, triés par date de publication puis création
-      const all = await prisma.article.findMany({ 
-        orderBy: [
-          { publishedAt: 'desc' },
-          { createdAt: 'desc' },
-        ],
-      });
-      console.log('All articles retrieved successfully:', all.length, 'articles');
-      return NextResponse.json(all);
-    } catch (e: any) {
-      // Graceful fallback if tables are not yet migrated
-      const msg = String(e?.message || e || '');
-      if (msg.includes('does not exist') || msg.includes('relation') || msg.includes('table')) {
-        console.warn('Articles table not found yet, returning empty list');
-        return NextResponse.json([]);
-      }
-      throw e;
-    }
+    const all = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
+    console.log('All articles retrieved successfully:', all);
+    return NextResponse.json(all);
   } catch (e) {
     console.error('Error in GET /api/articles:', e);
     return NextResponse.json({ error: 'failed' }, { status: 500 });
@@ -180,45 +103,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'slug is required' }, { status: 400 });
     }
 
-    // Vérifier si l'article existe
-    const existing = await prisma.article.findUnique({ where: { slug } });
-    if (!existing) {
-      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
-    }
-
-    // Supprimer l'article
     const deleted = await prisma.article.delete({ where: { slug } });
-    console.log('Article deleted successfully:', { id: deleted.id, slug: deleted.slug, title: deleted.title });
-    
-    return NextResponse.json({ 
-      success: true, 
-      deleted: {
-        id: deleted.id,
-        slug: deleted.slug,
-        title: deleted.title
-      }
-    });
-  } catch (e: any) {
+    return NextResponse.json(deleted);
+  } catch (e) {
     console.error('Error in DELETE /api/articles:', e);
-    console.error('Error details:', {
-      message: e?.message,
-      code: e?.code,
-      name: e?.name,
-    });
-    
-    // Si l'article n'existe pas, retourner succès (idempotent)
-    if (e?.code === 'P2025' || e?.message?.includes('Record to delete does not exist')) {
-      console.log('Article already deleted or does not exist');
-      return NextResponse.json({ success: true, message: 'Article already deleted' });
-    }
-    
-    return NextResponse.json({ 
-      error: e?.message || 'failed',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: e?.message,
-        code: e?.code,
-        name: e?.name,
-      } : undefined
-    }, { status: 500 });
+    return NextResponse.json({ error: 'failed' }, { status: 500 });
   }
 }

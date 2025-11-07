@@ -22,11 +22,12 @@ export default function ArticleList({ articles, onDelete, onEdit, onToggleBreaki
           <button className="text-sm text-gray-600" onClick={() => setQuery('')}>Effacer</button>
         </div>
       </div>
+
       <div className="space-y-3 max-h-[600px] overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="text-sm text-gray-500 p-3 text-center">Aucun article trouvé.</div>
         ) : (
-          filtered.map((a) => (
+          filtered.map((a: any) => (
             <div key={a.slug || a.id} className="p-3 border rounded bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -48,22 +49,23 @@ export default function ArticleList({ articles, onDelete, onEdit, onToggleBreaki
                     )}
                   </div>
                 </div>
-              <div className="flex items-center gap-2">
-                {onEdit && (
-                  <button className="text-sm text-gray-700 dark:text-gray-200" onClick={() => onEdit(a)}>Éditer</button>
-                )}
-                {onToggleBreaking && (
-                  <button onClick={() => onToggleBreaking(a.slug)} className={`text-sm px-2 py-1 rounded ${a.isBreaking ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{a.isBreaking ? 'Retirer BREAKING' : 'Marquer BREAKING'}</button>
-                )}
-                <button className="text-sm text-red-600" onClick={() => {
-                  if (!confirm('Supprimer cet article ? Cette action est irréversible.')) return;
-                  onDelete(a.slug);
-                }}>Supprimer</button>
+
+                <div className="flex items-center gap-2">
+                  {onEdit && (
+                    <button className="text-sm text-gray-700 dark:text-gray-200" onClick={() => onEdit(a)}>Éditer</button>
+                  )}
+                  {onToggleBreaking && (
+                    <button onClick={() => onToggleBreaking(a.slug)} className={`text-sm px-2 py-1 rounded ${a.isBreaking ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{a.isBreaking ? 'Retirer BREAKING' : 'Marquer BREAKING'}</button>
+                  )}
+                  <button className="text-sm text-red-600" onClick={() => {
+                    if (!confirm('Supprimer cet article ? Cette action est irréversible.')) return;
+                    onDelete(a.slug);
+                  }}>Supprimer</button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        {filtered.length === 0 && <div className="text-sm text-gray-500 p-3">Aucun article trouvé.</div>}
+          ))
+        )}
       </div>
     </div>
   );

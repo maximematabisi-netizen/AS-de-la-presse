@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prismaClient';
+import prisma from '@/lib/prismaClient';
 
 // Validation simple de l'email
 function isValidEmail(email: string): boolean {

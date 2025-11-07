@@ -7,12 +7,12 @@ export default function PrivacyPageProxy() {
 
 				<section id="terms" className="mt-6">
 					<h2 className="text-xl font-semibold mb-2">Conditions d&apos;utilisation</h2>
-					<p className="text-gray-700 dark:text-gray-300">En utilisant ce site, vous acceptez nos conditions d&apos;utilisation. (Texte d&apos;exemple)</p>
+						<p className="text-gray-700 dark:text-gray-300">En utilisant ce site, vous acceptez nos conditions d&apos;utilisation. (Texte d'exemple)</p>
 				</section>
 
 				<section id="cookies" className="mt-6">
 					<h2 className="text-xl font-semibold mb-2">Cookies</h2>
-					<p className="text-gray-700 dark:text-gray-300">Nous utilisons des cookies pour améliorer votre exp&eacute;rience. Vous pouvez gérer vos pr&eacute;f&eacute;rences de cookies dans les param&egrave;tres de votre navigateur.</p>
+					<p className="text-gray-700 dark:text-gray-300">Nous utilisons des cookies pour améliorer votre expérience. Vous pouvez gérer vos préférences de cookies dans les paramètres de votre navigateur.</p>
 				</section>
 			</div>
 		</main>

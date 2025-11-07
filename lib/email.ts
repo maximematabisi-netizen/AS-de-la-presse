@@ -1,8 +1,18 @@
-import { Resend } from 'resend';
+// Ensure TypeScript doesn't error if `require` or `process` types aren't present in the environment
+declare const require: any;
+declare const process: any;
+
+// Attempt to load Resend dynamically so missing package doesn't break the app
+let Resend: any = null;
+try {
+  Resend = require && typeof require === 'function' ? require('resend')?.Resend || null : null;
+} catch (e) {
+  Resend = null;
+}
 import prisma from './prismaClient';
 
-// Initialiser Resend avec la clé API depuis les variables d'environnement
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Initialiser Resend avec la clé API depuis les variables d'environnement (si présent)
+const resend = (Resend && process.env.RESEND_API_KEY) ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Template d'email HTML pour les notifications d'articles
 function getEmailTemplate(article: {
@@ -109,7 +119,7 @@ export async function sendNewsletterNotification(article: {
 
     for (let i = 0; i < subscribers.length; i += batchSize) {
       const batch = subscribers.slice(i, i + batchSize);
-      const recipients = batch.map(s => s.email);
+  const recipients = batch.map((s: any) => s.email);
 
       try {
         const { data, error } = await resend.emails.send({

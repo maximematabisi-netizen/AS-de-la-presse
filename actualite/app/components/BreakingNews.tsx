@@ -6,7 +6,7 @@ import mockArticles from '../data/mockArticles';
 
 const BreakingNews = () => {
   const [enabled, setEnabled] = useState(true);
-  const [articles, setArticles] = useState<typeof mockArticles>(process.env.NODE_ENV === 'production' ? [] as any : mockArticles);
+  const [articles, setArticles] = useState<typeof mockArticles>(mockArticles);
   useEffect(() => {
     const v = localStorage.getItem('breakingEnabled');
     if (v !== null) setEnabled(v === '1');
@@ -16,23 +16,10 @@ const BreakingNews = () => {
     };
     window.addEventListener('storage', handler);
     // load admin-persisted articles if present
-    // En production: charger depuis l'API
-    if (process.env.NODE_ENV === 'production') {
-      (async () => {
-        try {
-          const r = await fetch('/api/articles');
-          if (r.ok) {
-            const data = await r.json();
-            if (Array.isArray(data)) setArticles(data);
-          }
-        } catch (e) {}
-      })();
-    } else {
-      try {
-        const raw = localStorage.getItem('admin:articles');
-        if (raw) setArticles(JSON.parse(raw));
-      } catch (e) {}
-    }
+    try {
+      const raw = localStorage.getItem('admin:articles');
+      if (raw) setArticles(JSON.parse(raw));
+    } catch (e) {}
 
     // Also listen for admin:articles:changed in the same tab
     const onAdminChange = (ev: Event) => {
@@ -45,15 +32,8 @@ const BreakingNews = () => {
         if (raw) setArticles(JSON.parse(raw));
       } catch (e) {}
     };
-    if (process.env.NODE_ENV !== 'production') {
-      window.addEventListener('admin:articles:changed', onAdminChange as EventListener);
-    }
-    return () => {
-      window.removeEventListener('storage', handler);
-      if (process.env.NODE_ENV !== 'production') {
-        window.removeEventListener('admin:articles:changed', onAdminChange as EventListener);
-      }
-    };
+    window.addEventListener('admin:articles:changed', onAdminChange as EventListener);
+    return () => window.removeEventListener('storage', handler);
   }, []);
 
   if (!enabled) return null;

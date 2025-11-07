@@ -6,7 +6,7 @@ export const revalidate = 0;
 export async function GET() {
   try {
     const all = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
-    const out = all.map(a => ({ id: a.id, slug: a.slug, title: a.title, publishedAt: a.publishedAt, synced: (a as any).synced ?? true }));
+  const out = all.map((a: any) => ({ id: a.id, slug: a.slug, title: a.title, publishedAt: a.publishedAt, synced: (a as any).synced ?? true }));
     return NextResponse.json(out);
   } catch (e: any) {
     console.error('Error in debug GET /api/debug/articles', e);

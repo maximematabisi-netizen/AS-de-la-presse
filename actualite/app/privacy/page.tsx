@@ -7,7 +7,7 @@ export default function PrivacyPage() {
 
         <section id="terms" className="mt-6">
           <h2 className="text-xl font-semibold mb-2">Conditions d'utilisation</h2>
-          <p className="text-gray-700 dark:text-gray-300">En utilisant ce site, vous acceptez nos conditions d'utilisation. (Texte d'exemple)</p>
+          <p className="text-gray-700 dark:text-gray-300">En utilisant ce site, vous acceptez nos conditions d&apos;utilisation. (Texte d'exemple)</p>
         </section>
 
         <section id="cookies" className="mt-6">

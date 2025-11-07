@@ -50,18 +50,8 @@ export default function AdminShell() {
     checkSession();
   }, [router]);
 
-  // Charger les articles depuis localStorage après hydration
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      const rawArticles = localStorage.getItem('admin:articles');
-      if (rawArticles) setArticles(JSON.parse(rawArticles));
-    } catch (e) {
-      // ignore parse errors
-    }
-  }, [hydrated]);
-
-  // Persist articles after hydration
+  // Persist articles after hydration (pour le fallback uniquement)
+  // Le serveur reste la source de vérité - localStorage est juste un cache
   useEffect(() => {
     if (!hydrated) return;
     try {
