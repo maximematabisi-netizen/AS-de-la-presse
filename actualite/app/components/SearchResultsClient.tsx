@@ -8,13 +8,42 @@ export default function SearchResultsClient({ q }: { q: string }) {
   const [adminArticles, setAdminArticles] = useState<any[] | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('admin:articles');
-      if (raw) setAdminArticles(JSON.parse(raw));
-      else setAdminArticles([]);
-    } catch (e) {
-      setAdminArticles([]);
-    }
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/articles');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted && Array.isArray(data) && data.length > 0) {
+            setAdminArticles(data);
+            return;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      try {
+        const raw = localStorage.getItem('admin:articles');
+        if (raw) setAdminArticles(JSON.parse(raw));
+        else setAdminArticles([]);
+      } catch (e) {
+        setAdminArticles([]);
+      }
+    };
+    load();
+    const onAdminChange = (ev: Event) => {
+      try {
+        const ce = ev as CustomEvent;
+        if (ce?.detail) { setAdminArticles(ce.detail as any[]); return; }
+      } catch (e) {}
+      try {
+        const raw = localStorage.getItem('admin:articles');
+        if (raw) setAdminArticles(JSON.parse(raw));
+      } catch (e) {}
+    };
+    window.addEventListener('admin:articles:changed', onAdminChange as EventListener);
+    return () => { mounted = false; window.removeEventListener('admin:articles:changed', onAdminChange as EventListener); };
   }, []);
 
   const results = useMemo(() => {
