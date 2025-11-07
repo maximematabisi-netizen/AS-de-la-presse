@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -86,8 +87,38 @@ export async function POST(req: NextRequest) {
     createData.synced = true;
     createData.syncedAt = new Date();
 
-    const created = await prisma.article.create({ data: createData });
-    console.log('Article created successfully:', created);
+    // Use upsert so repeated publishes or retries (from admin auto-resync)
+    // do not fail with a unique-constraint error when the slug already exists.
+    const created = await prisma.article.upsert({
+      where: { slug } as any,
+      update: createData,
+      create: createData,
+    });
+    console.log('Article upserted successfully:', created);
+
+    // Revalidate the main actualite listing and the specific article page so
+    // published articles appear immediately on the site without waiting for
+    // any external cache/window.
+    try {
+      revalidatePath('/actualite');
+      // article page
+      if (created.slug) revalidatePath(`/actualite/article/${created.slug}`);
+      // category page (slugify category)
+      if (created.category) {
+        const catSlug = String(created.category || '')
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+        if (catSlug) revalidatePath(`/actualite/${catSlug}`);
+      }
+    } catch (e) {
+      console.warn('Revalidation failed (non-fatal):', e);
+    }
     return NextResponse.json(created);
   } catch (e) {
     console.error('Error in POST /api/articles:', e);
@@ -154,6 +185,27 @@ export async function DELETE(req: NextRequest) {
 
     try {
       const deleted = await prisma.article.delete({ where: { id: article.id } });
+
+      // Revalidate relevant pages so the deleted article disappears from listings
+      try {
+        revalidatePath('/actualite');
+        if (article.slug) revalidatePath(`/actualite/article/${article.slug}`);
+        if (article.category) {
+          const catSlug = String(article.category || '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+          if (catSlug) revalidatePath(`/actualite/${catSlug}`);
+        }
+      } catch (e) {
+        console.warn('Revalidation failed after delete (non-fatal):', e);
+      }
+
       return NextResponse.json({ ok: true, deleted });
     } catch (e) {
       console.error('Error deleting article', article?.id, e);
