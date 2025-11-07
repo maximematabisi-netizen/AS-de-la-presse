@@ -257,8 +257,9 @@ export default function AdminShell() {
 
         // Prepare a friendly result summary
         const total = j.results ? j.results.length : 0;
-        const failed = Array.isArray(j.results) ? j.results.filter((r: any) => !r.ok).map((r: any) => r.slug) : [];
-        alert('Resync terminé: ' + total + ' articles traités' + (failed.length ? '\nÉchecs: ' + failed.join(', ') : ''));
+  const failedItems = Array.isArray(j.results) ? j.results.filter((r: any) => !r.ok) : [];
+  const failed = failedItems.map((r: any) => `${r.slug}${r.error ? `: ${r.error}` : ''}`);
+  alert('Resync terminé: ' + total + ' articles traités' + (failed.length ? '\nÉchecs:\n' + failed.join('\n') : ''));
       } else {
         alert('Resync terminé (aucun détail)');
       }

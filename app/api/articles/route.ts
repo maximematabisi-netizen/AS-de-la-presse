@@ -7,7 +7,8 @@ export async function POST(req: NextRequest) {
   try {
     if (!process.env.DATABASE_URL) {
       console.error('DATABASE_URL is missing in environment');
-      return NextResponse.json({ error: 'DATABASE_URL manquant. Configurez la variable d\'environnement DATABASE_URL.' }, { status: 500 });
+      // Return 503 to indicate service unavailable (DB not configured)
+      return NextResponse.json({ error: 'DATABASE_URL manquant. Configurez la variable d\'environnement DATABASE_URL sur Vercel ou .env.local en local.' }, { status: 503 });
     }
     // Read the request body once. Logging the body consumed the stream previously,
     // causing subsequent reads to return empty and making server-side saves fail.
