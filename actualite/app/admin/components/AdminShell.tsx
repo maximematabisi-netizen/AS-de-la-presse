@@ -214,6 +214,32 @@ export default function AdminShell() {
     }
   };
 
+  // Background auto-resync: periodically try to resend any unsynced local articles.
+  // This ensures that if the first POST failed (network/edge), the client will
+  // automatically retry and once the server accepts, the server-side revalidation
+  // will make the article appear on the homepage without manual steps.
+  useEffect(() => {
+    if (!hydrated) return;
+    let stopped = false;
+    const interval = setInterval(async () => {
+      if (stopped) return;
+      try {
+        const unsynced = articles.filter(a => a.synced === false || a.synced === undefined);
+        if (!unsynced || unsynced.length === 0) return;
+        console.log('Auto-resync: found', unsynced.length, 'unsynced articles, attempting resync...');
+        await resyncUnsynced();
+      } catch (e) {
+        // ignore transient errors - we'll retry on next tick
+        console.warn('Auto-resync attempt failed (will retry):', e);
+      }
+    }, 8000);
+
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [hydrated, articles]);
+
   const forceServerResync = async () => {
     try {
       const raw = localStorage.getItem('admin:articles');
