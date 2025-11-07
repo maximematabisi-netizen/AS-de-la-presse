@@ -75,16 +75,36 @@ export default function AdminShell() {
         const serverArticles = await r.json();
         if (!Array.isArray(serverArticles)) return;
 
-        // Utiliser uniquement les articles du serveur (source de vérité)
-        // Les articles supprimés ne seront plus dans la liste serveur
-        const mappedArticles = serverArticles.map((a: any) => ({
-          ...a,
-          author: { name: user?.username || 'Admin' },
-          synced: true
-        }));
-        
-        setArticles(mappedArticles);
-        console.log('Admin: loaded articles from server (source of truth)', serverArticles.length);
+        // Merge server articles with any locally-saved articles (preserve unsynced local items)
+        const localRaw = localStorage.getItem('admin:articles');
+        let localArticles: any[] = [];
+        try {
+          localArticles = localRaw ? JSON.parse(localRaw) : [];
+        } catch (e) {
+          localArticles = [];
+        }
+
+        const mappedServer = serverArticles.map((a: any) => ({ ...a, author: { name: user?.username || 'Admin' }, synced: true }));
+
+        // Find local items that are not present on server (by slug) and preserve them
+        const missingLocal = Array.isArray(localArticles)
+          ? localArticles.filter((l: any) => !mappedServer.some((s: any) => String(s.slug) === String(l.slug)))
+          : [];
+
+        // Keep order: server items first (source of truth), then preserved local unsynced
+        const merged = [...mappedServer, ...missingLocal.map((l: any) => ({ ...l, author: { name: user?.username || 'Admin' }, synced: false }))];
+
+        // De-duplicate just in case
+        const seen = new Set();
+        const deduped = [] as any[];
+        for (const a of merged) {
+          const key = String(a.slug || a.id || JSON.stringify(a));
+          if (!seen.has(key)) { seen.add(key); deduped.push(a); }
+        }
+
+        setArticles(deduped);
+        localStorage.setItem('admin:articles', JSON.stringify(deduped));
+        console.log('Admin: loaded and merged server + local articles', deduped.length);
       } catch (e) {
         console.error('Admin: failed to fetch server articles', e);
       }
