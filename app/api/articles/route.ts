@@ -47,9 +47,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'title and slug required' }, { status: 400 });
     }
 
-    // If an image URL is provided and looks remote, validate its content-type before accepting
-    let imageToStore: string | null = image || null;
-    if (image && typeof image === 'string' && (image.startsWith('http://') || image.startsWith('https://'))) {
+    // If an image is provided, only accept string values. If it's a remote URL,
+    // validate its content-type. Reject non-string payloads to avoid passing
+    // objects (e.g. File) into Prisma which causes a 500.
+    let imageToStore: string | null = null;
+    if (image && typeof image === 'string') {
+      if (image.startsWith('http://') || image.startsWith('https://')) {
       try {
         // First try a HEAD request to check content-type
         let res = await fetch(image, { method: 'HEAD' });
@@ -66,6 +69,10 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         console.error('image validation failed', err);
         return NextResponse.json({ error: 'failed to validate remote image URL' }, { status: 400 });
+      }
+      } else {
+        // it's a plain string (not an http(s) URL) — accept as-is
+        imageToStore = image;
       }
     }
 

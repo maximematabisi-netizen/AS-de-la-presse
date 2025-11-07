@@ -80,7 +80,9 @@ export async function POST(req: Request) {
         excerpt: item.excerpt || '',
         content: item.content || '',
         category: item.category || 'Actualité',
-        image: item.image || null,
+        // Only accept string image values; ignore objects (File) which would
+        // otherwise cause Prisma to throw with a 500 when inserting an object.
+        image: typeof item.image === 'string' ? item.image : null,
         highlightedQuote: item.highlightedQuote || null,
         isBreaking: !!item.isBreaking,
         publishedAt: publishedAt,
