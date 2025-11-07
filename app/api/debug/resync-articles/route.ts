@@ -15,7 +15,34 @@ export async function POST(req: Request) {
     const results: any[] = [];
     for (const item of body) {
       if (!item || !item.slug) continue;
-      const slug = String(item.slug);
+      const rawSlug = String(item.slug);
+      // normalize slug similarly to server-side creation
+      const slugify = (s: string) => {
+        if (!s) return '';
+        return s
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+      };
+      const slug = slugify(decodeURIComponent(rawSlug));
+
+      // If the item is marked deleted on the client, delete it server-side
+      if ((item as any).deleted) {
+        try {
+          await prisma.article.delete({ where: { slug } });
+          results.push({ slug, ok: true, deleted: true });
+        } catch (e) {
+          // If deletion failed (not found etc.), push error but continue
+          results.push({ slug, ok: false, error: e instanceof Error ? e.message : String(e) });
+        }
+        continue;
+      }
+
       const data: any = {
         title: item.title || item.slug,
         slug,

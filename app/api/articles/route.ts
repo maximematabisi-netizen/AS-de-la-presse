@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     console.log('Received POST request with body:', body);
     const {
       title,
-      slug,
+      slug: rawSlug,
       excerpt,
       content,
       category,
@@ -19,6 +19,22 @@ export async function POST(req: NextRequest) {
       image,
       highlightedQuote,
     } = body;
+
+    // Normalize or generate a safe slug server-side to avoid mismatches
+    const slugify = (s: string) => {
+      if (!s) return '';
+      return s
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize('NFD') // decompose accents
+        .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+        .replace(/[^a-z0-9\s-]/g, '') // remove invalid chars
+        .replace(/\s+/g, '-') // collapse whitespace to dashes
+        .replace(/-+/g, '-');
+    };
+
+    const slug = rawSlug && typeof rawSlug === 'string' && rawSlug.trim() ? slugify(rawSlug) : slugify(title || 'article-' + Date.now());
 
     if (!title || !slug) {
       console.error('Validation failed: title and slug are required');
