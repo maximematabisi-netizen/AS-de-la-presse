@@ -221,10 +221,24 @@ export default function AdminShell() {
       }
       const j = await r.json();
       if (j && Array.isArray(j.all)) {
-        setArticles(j.all);
-        localStorage.setItem('admin:articles', JSON.stringify(j.all));
-        window.dispatchEvent(new CustomEvent('admin:articles:changed', { detail: j.all }));
-        alert('Resync terminé: ' + (j.results ? j.results.length : 0) + ' articles traités');
+        const serverArticles = j.all as any[];
+        // Preserve any local-only articles that were not created on the server during resync
+        const localArr = Array.isArray(arr) ? arr : [];
+        const missingLocal = localArr.filter((l: any) => !serverArticles.some(s => String(s.slug) === String(l.slug)));
+
+        const mappedServer = serverArticles.map((a: any) => ({ ...a, author: { name: user?.username || 'Admin' }, synced: true }));
+        const preservedLocal = missingLocal.map((l: any) => ({ ...l, author: { name: user?.username || 'Admin' }, synced: false }));
+
+        const merged = [...mappedServer, ...preservedLocal];
+
+        setArticles(merged);
+        localStorage.setItem('admin:articles', JSON.stringify(merged));
+        window.dispatchEvent(new CustomEvent('admin:articles:changed', { detail: merged }));
+
+        // Prepare a friendly result summary
+        const total = j.results ? j.results.length : 0;
+        const failed = Array.isArray(j.results) ? j.results.filter((r: any) => !r.ok).map((r: any) => r.slug) : [];
+        alert('Resync terminé: ' + total + ' articles traités' + (failed.length ? '\nÉchecs: ' + failed.join(', ') : ''));
       } else {
         alert('Resync terminé (aucun détail)');
       }
